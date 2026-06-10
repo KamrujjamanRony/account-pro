@@ -1,0 +1,69 @@
+@if (bc.breadcrumbs().length > 0) {
+  <div class="max-w-7xl mx-auto px-4 py-3">
+    <nav class="flex" aria-label="Breadcrumb">
+      <ol
+        class="inline-flex items-center flex-wrap gap-y-1 space-x-1 md:space-x-2 rtl:space-x-reverse"
+      >
+        <li class="inline-flex items-center">
+          <a
+            routerLink="/"
+            class="inline-flex items-center text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+          >
+            <svg
+              class="w-4 h-4 me-1.5"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5"
+              />
+            </svg>
+            Home
+          </a>
+        </li>
+        @for (crumb of bc.breadcrumbs(); track crumb.url; let last = $last) {
+          <li>
+            <div class="flex items-center">
+              <svg
+                class="w-3.5 h-3.5 mx-1 rtl:rotate-180 text-neutral-400 dark:text-neutral-500"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m9 5 7 7-7 7"
+                />
+              </svg>
+              @if (!last) {
+                <a
+                  [routerLink]="crumb.url"
+                  class="text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  {{ crumb.label }}
+                </a>
+              } @else {
+                <span
+                  class="text-sm font-semibold text-neutral-800 dark:text-neutral-200"
+                  aria-current="page"
+                >
+                  {{ crumb.label }}
+                </span>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    </nav>
+  </div>
+}
