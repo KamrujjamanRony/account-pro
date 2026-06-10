@@ -25,6 +25,12 @@ export const routes: Routes = [
         title: `Chart of Account | ${companyName}`,
       },
       {
+        path: 'ledger',
+        loadComponent: () => import('./pages/ledger/ledger').then(m => m.Ledger),
+        data: { breadcrumb: 'Ledger' },
+        title: `Ledger | ${companyName}`,
+      },
+      {
         path: 'user-list',
         loadComponent: () => import('./pages/users/users').then(m => m.Users),
         data: { breadcrumb: 'User List' },
@@ -34,7 +40,7 @@ export const routes: Routes = [
         path: 'menu-list',
         loadComponent: () => import('./pages/menus/menus').then(m => m.Menus),
         data: { breadcrumb: 'Menu List' },
-        title: `Menu List | ${companyName}`,  
+        title: `Menu List | ${companyName}`,
       }
     ]
   },

@@ -1,1 +1,173 @@
-<p>menus works!</p>
+<div class="mx-auto max-w-7xl px-4 pb-12">
+  <!-- Header -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Menus</h1>
+      <p class="text-sm text-neutral-500">Manage application menus and their permissions.</p>
+    </div>
+    <div class="flex gap-2">
+      <button
+        type="button"
+        (click)="seedDefaults()"
+        class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+      >
+        Seed default menus
+      </button>
+      <button
+        type="button"
+        (click)="openCreate()"
+        class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      >
+        + Add menu
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Search -->
+  <div class="mb-3">
+    <label for="menu-search" class="sr-only">Search menus</label>
+    <input
+      id="menu-search"
+      type="search"
+      placeholder="Search by name or URL…"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+      class="w-full max-w-xs rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"
+    />
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <table class="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
+      <thead class="bg-neutral-50 dark:bg-neutral-800/50">
+        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          <th scope="col" class="px-4 py-3">Name</th>
+          <th scope="col" class="px-4 py-3">URL</th>
+          <th scope="col" class="px-4 py-3">Parent</th>
+          <th scope="col" class="px-4 py-3">Permissions</th>
+          <th scope="col" class="px-4 py-3">Status</th>
+          <th scope="col" class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+        @if (loading()) {
+          <tr><td colspan="6" class="px-4 py-8 text-center text-neutral-500">Loading…</td></tr>
+        } @else if (filteredMenus().length === 0) {
+          <tr><td colspan="6" class="px-4 py-8 text-center text-neutral-500">No menus found.</td></tr>
+        } @else {
+          @for (menu of filteredMenus(); track menu.id) {
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+              <td class="px-4 py-3 font-medium text-neutral-900 dark:text-white">{{ menu.menuName }}</td>
+              <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ menu.url || '—' }}</td>
+              <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ parentName(menu.parentMenuId) }}</td>
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-1">
+                  @for (key of menu.permissionsKey; track key) {
+                    <span class="rounded bg-primary-50 px-1.5 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">{{ key }}</span>
+                  } @empty {
+                    <span class="text-xs text-neutral-400">—</span>
+                  }
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                @if (menu.isActive) {
+                  <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-300">Active</span>
+                } @else {
+                  <span class="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">Inactive</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button type="button" (click)="openEdit(menu)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                <button type="button" (click)="remove(menu)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Form dialog -->
+@if (showForm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="menu-form-title">
+    <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <h2 id="menu-form-title" class="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
+        {{ editingId() ? 'Edit menu' : 'Add menu' }}
+      </h2>
+
+      @if (formError()) {
+        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formError() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+        <div>
+          <label for="menuName" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Menu name</label>
+          <input id="menuName" type="text" formControlName="menuName"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          @if (form.controls.menuName.touched && form.controls.menuName.invalid) {
+            <p class="mt-1 text-xs text-red-600">Menu name is required.</p>
+          }
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label for="url" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">URL</label>
+            <input id="url" type="text" formControlName="url" placeholder="/example"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+          <div>
+            <label for="parentMenuId" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Parent menu</label>
+            <select id="parentMenuId" formControlName="parentMenuId"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+              <option [ngValue]="null">None (root)</option>
+              @for (p of parentOptions(); track p.id) {
+                <option [ngValue]="p.id">{{ p.menuName }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="icon" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Icon (optional)</label>
+          <input id="icon" type="text" formControlName="icon"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+        </div>
+
+        <fieldset formGroupName="permissions">
+          <legend class="mb-1 text-sm font-medium text-neutral-700 dark:text-neutral-300">Permissions</legend>
+          <div class="flex flex-wrap gap-4">
+            @for (action of actions; track action) {
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" [formControlName]="action"
+                  class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+                {{ permissionLabel(action) }}
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" formControlName="isActive"
+            class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+          Active
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" (click)="closeForm()"
+            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
+          <button type="submit" [disabled]="saving()"
+            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
+            {{ saving() ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
