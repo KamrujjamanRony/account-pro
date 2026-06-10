@@ -13,13 +13,6 @@
       >
         Seed defaults
       </button>
-      <button
-        type="button"
-        (click)="openCreateRoot()"
-        class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-      >
-        + Add root account
-      </button>
     </div>
   </div>
 
@@ -95,10 +88,12 @@
               <span class="ml-auto flex items-center gap-1">
                 <button type="button" (click)="openCreateChild(row.node)"
                   class="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40">+ Add child</button>
-                <button type="button" (click)="openEdit(row.node)"
-                  class="rounded px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
-                <button type="button" (click)="remove(row.node)"
-                  class="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+                @if (row.node.parentId !== null) {
+                  <button type="button" (click)="openEdit(row.node)"
+                    class="rounded px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                  <button type="button" (click)="remove(row.node)"
+                    class="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+                }
               </span>
             </li>
           }
@@ -146,8 +141,10 @@
                   </td>
                   <td class="px-4 py-3 text-right">
                     <button type="button" (click)="openCreateChild(account)" class="rounded px-2 py-1 text-sm font-medium text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40">Add child</button>
-                    <button type="button" (click)="openEdit(account)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
-                    <button type="button" (click)="remove(account)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+                    @if (account.parentId !== null) {
+                      <button type="button" (click)="openEdit(account)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                      <button type="button" (click)="remove(account)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+                    }
                   </td>
                 </tr>
               }

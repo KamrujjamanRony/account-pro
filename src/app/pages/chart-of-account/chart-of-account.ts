@@ -126,15 +126,6 @@ export class ChartOfAccount {
   }
 
   // ---- form lifecycle ----
-  openCreateRoot() {
-    this.editingId.set(null);
-    this.formParentId.set(null);
-    this.formParentName.set('');
-    this.formError.set('');
-    this.form.reset({ name: '', nature: 'Asset', isActive: true });
-    this.showForm.set(true);
-  }
-
   openCreateChild(parent: Account | ChartTreeNode) {
     this.editingId.set(null);
     this.formParentId.set(parent.id ?? null);
