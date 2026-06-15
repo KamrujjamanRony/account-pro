@@ -3,7 +3,6 @@
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
     <div>
       <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Chart of Account</h1>
-      <p class="text-sm text-neutral-500">Manage the account hierarchy.</p>
     </div>
     <div class="flex gap-2">
       <button
@@ -11,173 +10,146 @@
         (click)="seed()"
         class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
       >
-        Seed defaults
+        Defaults
       </button>
     </div>
   </div>
 
   @if (error()) {
-    <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <div
+      role="alert"
+      class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+    >
       {{ error() }}
     </div>
   }
 
-  <!-- Tabs -->
-  <div class="mb-4 border-b border-neutral-200 dark:border-neutral-800" role="tablist" aria-label="Chart of account views">
-    <button
-      type="button"
-      role="tab"
-      [attr.aria-selected]="tab() === 'tree'"
-      (click)="setTab('tree')"
-      class="-mb-px border-b-2 px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-      [class.border-primary-600]="tab() === 'tree'"
-      [class.text-primary-700]="tab() === 'tree'"
-      [class.border-transparent]="tab() !== 'tree'"
-      [class.text-neutral-500]="tab() !== 'tree'"
-    >
-      Tree
-    </button>
-    <button
-      type="button"
-      role="tab"
-      [attr.aria-selected]="tab() === 'data'"
-      (click)="setTab('data')"
-      class="-mb-px border-b-2 px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-      [class.border-primary-600]="tab() === 'data'"
-      [class.text-primary-700]="tab() === 'data'"
-      [class.border-transparent]="tab() !== 'data'"
-      [class.text-neutral-500]="tab() !== 'data'"
-    >
-      Data
-    </button>
-  </div>
-
   <!-- Tree tab -->
-  @if (tab() === 'tree') {
-    <div role="tabpanel" class="rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-      @if (loading()) {
-        <p class="px-4 py-8 text-center text-neutral-500">Loading…</p>
-      } @else if (visibleRows().length === 0) {
-        <p class="px-4 py-8 text-center text-neutral-500">No accounts yet. Add a root account or seed defaults.</p>
-      } @else {
-        <ul class="divide-y divide-neutral-100 dark:divide-neutral-800">
-          @for (row of visibleRows(); track row.node.id) {
-            <li class="flex items-center gap-2 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
-              [style.padding-left.rem]="1 + row.level * 1.5">
-              @if (row.hasChildren) {
-                <button type="button" (click)="toggleExpand(row.node.id)"
-                  [attr.aria-label]="(row.expanded ? 'Collapse ' : 'Expand ') + row.node.name"
-                  [attr.aria-expanded]="row.expanded"
-                  class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700">
-                  <svg class="h-4 w-4 transition-transform" [class.rotate-90]="row.expanded" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m9 18 6-6-6-6" />
-                  </svg>
-                </button>
-              } @else {
-                <span class="inline-block h-6 w-6 shrink-0" aria-hidden="true"></span>
-              }
-
-              <span class="font-medium text-neutral-900 dark:text-white">{{ row.node.name }}</span>
-              @if (row.node.nature) {
-                <span class="rounded bg-primary-50 px-1.5 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">{{ row.node.nature }}</span>
-              }
-              @if (!row.node.isActive) {
-                <span class="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800">Inactive</span>
-              }
-
-              <span class="ml-auto flex items-center gap-1">
-                <button type="button" (click)="openCreateChild(row.node)"
-                  class="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40">+ Add child</button>
-                @if (row.node.parentId !== null) {
-                  <button type="button" (click)="openEdit(row.node)"
-                    class="rounded px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
-                  <button type="button" (click)="remove(row.node)"
-                    class="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
-                }
-              </span>
-            </li>
-          }
-        </ul>
-      }
-    </div>
-  }
-
-  <!-- Data tab -->
-  @if (tab() === 'data') {
-    <div role="tabpanel">
-      <div class="mb-3">
-        <label for="acc-search" class="sr-only">Search accounts</label>
-        <input id="acc-search" type="search" placeholder="Search by name…"
-          [value]="search()" (input)="search.set($any($event.target).value)"
-          class="w-full max-w-xs rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
-      </div>
-
-      <div class="overflow-x-auto rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-        <table class="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
-          <thead class="bg-neutral-50 dark:bg-neutral-800/50">
-            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              <th scope="col" class="px-4 py-3">Name</th>
-              <th scope="col" class="px-4 py-3">Nature</th>
-              <th scope="col" class="px-4 py-3">Parent</th>
-              <th scope="col" class="px-4 py-3">Status</th>
-              <th scope="col" class="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-            @if (filteredAccounts().length === 0) {
-              <tr><td colspan="5" class="px-4 py-8 text-center text-neutral-500">No accounts found.</td></tr>
+  <div
+    role="tabpanel"
+    class="rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+  >
+    @if (loading()) {
+      <p class="px-4 py-8 text-center text-neutral-500">Loading…</p>
+    } @else if (visibleRows().length === 0) {
+      <p class="px-4 py-8 text-center text-neutral-500">
+        No accounts yet. Add a root account or seed defaults.
+      </p>
+    } @else {
+      <ul class="divide-y divide-neutral-100 dark:divide-neutral-800">
+        @for (row of visibleRows(); track row.node.id) {
+          <li
+            class="flex items-center gap-2 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+            [style.padding-left.rem]="1 + row.level * 1.5"
+          >
+            @if (row.hasChildren) {
+              <button
+                type="button"
+                (click)="toggleExpand(row.node.id)"
+                [attr.aria-label]="(row.expanded ? 'Collapse ' : 'Expand ') + row.node.name"
+                [attr.aria-expanded]="row.expanded"
+                class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+              >
+                <svg
+                  class="h-4 w-4 transition-transform"
+                  [class.rotate-90]="row.expanded"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
             } @else {
-              @for (account of filteredAccounts(); track account.id) {
-                <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
-                  <td class="px-4 py-3 font-medium text-neutral-900 dark:text-white">{{ account.name }}</td>
-                  <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ account.nature || '—' }}</td>
-                  <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ parentName(account.parentId) }}</td>
-                  <td class="px-4 py-3">
-                    @if (account.isActive) {
-                      <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-300">Active</span>
-                    } @else {
-                      <span class="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">Inactive</span>
-                    }
-                  </td>
-                  <td class="px-4 py-3 text-right">
-                    <button type="button" (click)="openCreateChild(account)" class="rounded px-2 py-1 text-sm font-medium text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40">Add child</button>
-                    @if (account.parentId !== null) {
-                      <button type="button" (click)="openEdit(account)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
-                      <button type="button" (click)="remove(account)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
-                    }
-                  </td>
-                </tr>
-              }
+              <span class="inline-block h-6 w-6 shrink-0" aria-hidden="true"></span>
             }
-          </tbody>
-        </table>
-      </div>
-    </div>
-  }
+
+            <span class="font-medium text-neutral-900 dark:text-white">{{ row.node.name }}</span>
+            @if (!row.node.isActive) {
+              <span
+                class="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800"
+                >Inactive</span
+              >
+            }
+
+            <span class="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                (click)="openCreateChild(row.node)"
+                class="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 dark:hover:bg-green-950/40"
+              >
+                Add
+              </button>
+              @if (row.node.parentId !== null) {
+                <button
+                  type="button"
+                  (click)="openEdit(row.node)"
+                  class="rounded px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  (click)="remove(row.node)"
+                  class="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                >
+                  Delete
+                </button>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
 </div>
 
 <!-- Form dialog -->
 @if (showForm()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="acc-form-title">
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="acc-form-title"
+  >
     <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
       <h2 id="acc-form-title" class="mb-1 text-lg font-semibold text-neutral-900 dark:text-white">
-        {{ editingId() ? 'Edit account' : (isRoot() ? 'Add root account' : 'Add sub-account') }}
+        {{ editingId() ? 'Edit account' : isRoot() ? 'Add root account' : 'Add sub-account' }}
       </h2>
       @if (!isRoot()) {
-        <p class="mb-4 text-sm text-neutral-500">Parent: <span class="font-medium">{{ formParentName() }}</span></p>
+        <p class="mb-4 text-sm text-neutral-500">
+          Parent: <span class="font-medium">{{ formParentName() }}</span>
+        </p>
       } @else {
         <div class="mb-4"></div>
       }
 
       @if (formError()) {
-        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formError() }}</div>
+        <div
+          role="alert"
+          class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          {{ formError() }}
+        </div>
       }
 
       <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
         <div>
-          <label for="acc-name" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Account name</label>
-          <input id="acc-name" type="text" formControlName="name"
-            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          <label
+            for="acc-name"
+            class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+            >Account name</label
+          >
+          <input
+            id="acc-name"
+            type="text"
+            formControlName="name"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"
+          />
           @if (form.controls.name.touched && form.controls.name.invalid) {
             <p class="mt-1 text-xs text-red-600">Account name is required.</p>
           }
@@ -185,9 +157,16 @@
 
         @if (isRoot()) {
           <div>
-            <label for="acc-nature" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Nature</label>
-            <select id="acc-nature" formControlName="nature"
-              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+            <label
+              for="acc-nature"
+              class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+              >Nature</label
+            >
+            <select
+              id="acc-nature"
+              formControlName="nature"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"
+            >
               @for (n of natures; track n) {
                 <option [value]="n">{{ n }}</option>
               }
@@ -196,16 +175,27 @@
         }
 
         <label class="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" formControlName="isActive"
-            class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+          <input
+            type="checkbox"
+            formControlName="isActive"
+            class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+          />
           Active
         </label>
 
         <div class="flex justify-end gap-2 pt-2">
-          <button type="button" (click)="closeForm()"
-            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
-          <button type="submit" [disabled]="saving()"
-            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
+          <button
+            type="button"
+            (click)="closeForm()"
+            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            [disabled]="saving()"
+            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
+          >
             {{ saving() ? 'Saving…' : 'Save' }}
           </button>
         </div>

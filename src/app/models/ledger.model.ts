@@ -22,3 +22,11 @@ export interface LedgerSearchQuery {
   search?: string | null;
   withOpeningOnly?: boolean;
 }
+
+/** Search payload for ledgers, including opening-balance totals. */
+export interface LedgerSearchResult {
+  items: Ledger[];
+  count: number;
+  totalDrOpeningBalance: number;
+  totalCrOpeningBalance: number;
+}

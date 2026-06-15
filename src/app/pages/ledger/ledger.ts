@@ -29,6 +29,9 @@ export class Ledger {
   protected readonly error = signal('');
   protected readonly search = signal('');
 
+  // ---- opening-balance tabs ----
+  protected readonly tab = signal<'all' | 'with' | 'without'>('all');
+
   protected readonly showForm = signal(false);
   protected readonly editingId = signal<number | null>(null);
   protected readonly saving = signal(false);
@@ -67,10 +70,22 @@ export class Ledger {
 
   protected readonly filteredLedgers = computed(() => {
     const term = this.search().trim().toLowerCase();
-    const list = this.ledgers();
-    if (!term) return list;
-    return list.filter(l => l.ledgerName.toLowerCase().includes(term));
+    const tab = this.tab();
+    return this.ledgers().filter(l => {
+      if (tab === 'with' && !this.hasOpening(l)) return false;
+      if (tab === 'without' && this.hasOpening(l)) return false;
+      if (term && !l.ledgerName.toLowerCase().includes(term)) return false;
+      return true;
+    });
   });
+
+  /** Totals reflect the rows currently shown for the active tab. */
+  protected readonly totalDr = computed(() =>
+    this.filteredLedgers().reduce((sum, l) => sum + (l.drOpeningBalance ?? 0), 0),
+  );
+  protected readonly totalCr = computed(() =>
+    this.filteredLedgers().reduce((sum, l) => sum + (l.crOpeningBalance ?? 0), 0),
+  );
 
   constructor() {
     this.loadLedgers();
@@ -81,12 +96,21 @@ export class Ledger {
     return ledger.groupName ?? this.groupNameById().get(ledger.groupId) ?? `#${ledger.groupId}`;
   }
 
+  /** A ledger carries an opening balance when either side is non-zero. */
+  private hasOpening(ledger: LedgerModel): boolean {
+    return (ledger.drOpeningBalance ?? 0) !== 0 || (ledger.crOpeningBalance ?? 0) !== 0;
+  }
+
+  selectTab(tab: 'all' | 'with' | 'without') {
+    this.tab.set(tab);
+  }
+
   loadLedgers() {
     this.loading.set(true);
     this.error.set('');
     this.service.search({}).subscribe({
-      next: data => {
-        this.ledgers.set(data ?? []);
+      next: result => {
+        this.ledgers.set(result.items);
         this.loading.set(false);
       },
       error: () => {

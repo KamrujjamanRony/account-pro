@@ -20,6 +20,8 @@ export interface User {
   isActive: boolean;
   postBy?: string;
   updateBy?: string;
+  /** JWT issued by the `Authentication/Login` endpoint. */
+  token?: string;
   menuPermissions: MenuPermissionNode[];
 }
 
