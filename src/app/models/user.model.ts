@@ -12,7 +12,7 @@ export interface MenuPermissionNode {
 
 /** User record. The API uses `username` on create and `userName` elsewhere. */
 export interface User {
-  userId?: number;
+  id?: number;
   username?: string;
   userName?: string;
   password?: string;

@@ -113,7 +113,7 @@ export class Users {
   }
 
   openEdit(user: User) {
-    this.editingId.set(user.userId ?? null);
+    this.editingId.set(user.id ?? null);
     this.formError.set('');
     this.form.reset({
       userName: user.userName ?? user.username ?? '',
@@ -125,10 +125,10 @@ export class Users {
     this.form.controls.password.updateValueAndValidity();
     this.showForm.set(true);
 
-    // Pull the full record for its saved permission tree.
-    if (user.userId != null) {
-      this.userService.getById(user.userId).subscribe({
-        next: full => this.applyTree(full?.menuPermissions),
+    // Pull the user's saved permission tree from GenerateTreeData.
+    if (user.id != null) {
+      this.menuService.generateTree(user.id).subscribe({
+        next: tree => this.applyTree(tree as MenuPermissionNode[]),
         error: () => this.applyTree(user.menuPermissions),
       });
     } else {
@@ -174,7 +174,7 @@ export class Users {
       });
     } else {
       const payload: User = {
-        userId: id,
+        id: id,
         userName: v.userName.trim(),
         isActive: v.isActive,
         postBy,
@@ -203,9 +203,10 @@ export class Users {
   }
 
   async remove(user: User) {
-    if (user.userId == null) return;
+    console.log('Attempting to delete user:', user);
+    if (user.id == null) return;
     if (!(await this.alert.confirmDelete(`user "${user.userName ?? user.username}"`))) return;
-    this.userService.delete(user.userId).subscribe({
+    this.userService.delete(user.id).subscribe({
       next: () => {
         this.alert.success('User deleted successfully.');
         this.loadUsers();
@@ -213,35 +214,6 @@ export class Users {
       error: () => {
         this.error.set('Failed to delete the user.');
         this.alert.error('Failed to delete the user.');
-      },
-    });
-  }
-
-  /** Create an "admin" user (password 12345) with every permission granted. */
-  createAdmin() {
-    if (this.menus().length === 0) {
-      this.error.set('Add menus first, then create the admin user.');
-      return;
-    }
-    const payload: User = {
-      username: 'admin',
-      password: '12345',
-      companyID: environment.companyCode,
-      isActive: true,
-      postBy: this.actor(),
-      menuPermissions: buildMenuPermissionTree(this.menus(), true),
-    };
-    this.loading.set(true);
-    this.error.set('');
-    this.userService.add(payload).subscribe({
-      next: () => {
-        this.alert.success('Admin user created successfully.');
-        this.loadUsers();
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('Failed to create the admin user.');
-        this.alert.error('Failed to create the admin user.');
       },
     });
   }
