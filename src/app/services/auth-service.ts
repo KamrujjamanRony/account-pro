@@ -22,8 +22,6 @@ export class AuthService {
         const user = (res.body ?? {}) as User;
         // Some APIs return the JWT in the Authorization header instead of the body.
         const headerToken = res.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
-        // TEMP diagnostic: shows the exact shape the API returns.
-        console.log('[auth] login body:', res.body, '| header token:', headerToken);
         this.setUser({ ...user, password: undefined }, headerToken ?? undefined);
         return user;
       }));

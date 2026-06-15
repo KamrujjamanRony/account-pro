@@ -17,8 +17,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isLogin = req.url.includes('/Authentication/Login');
 
   const willAttach = !!token && isApiCall && !isLogin;
-  // TEMP diagnostic.
-  console.log('[auth] →', req.method, req.url, '| token attached:', willAttach);
 
   const authReq = willAttach
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
