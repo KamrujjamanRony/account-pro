@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MenuService } from '../../services/menu-service';
 import { UserService } from '../../services/user-service';
 import { AuthService } from '../../services/auth-service';
+import { AlertService } from '../../services/alert-service';
 import { environment } from '../../../environments/environment';
 import { Menu } from '../../models/menu.model';
 import { MenuPermissionNode, User } from '../../models/user.model';
@@ -26,6 +27,7 @@ export class Users {
   private userService = inject(UserService);
   private menuService = inject(MenuService);
   private auth = inject(AuthService);
+  private alert = inject(AlertService);
 
   protected readonly users = signal<User[]>([]);
   protected readonly menus = signal<Menu[]>([]);
@@ -167,7 +169,7 @@ export class Users {
         menuPermissions: this.tree(),
       };
       this.userService.add(payload).subscribe({
-        next: () => this.onSaved(),
+        next: () => this.onSaved('created'),
         error: () => this.onSaveError(),
       });
     } else {
@@ -181,29 +183,37 @@ export class Users {
       };
       if (v.password) payload.password = v.password;
       this.userService.update(id, payload).subscribe({
-        next: () => this.onSaved(),
+        next: () => this.onSaved('updated'),
         error: () => this.onSaveError(),
       });
     }
   }
 
-  private onSaved() {
+  private onSaved(action: 'created' | 'updated') {
     this.saving.set(false);
     this.showForm.set(false);
+    this.alert.success(`User ${action} successfully.`);
     this.loadUsers();
   }
 
   private onSaveError() {
     this.saving.set(false);
     this.formError.set('Failed to save the user.');
+    this.alert.error('Failed to save the user.');
   }
 
-  remove(user: User) {
+  async remove(user: User) {
     if (user.userId == null) return;
-    if (!confirm(`Delete user "${user.userName ?? user.username}"?`)) return;
+    if (!(await this.alert.confirmDelete(`user "${user.userName ?? user.username}"`))) return;
     this.userService.delete(user.userId).subscribe({
-      next: () => this.loadUsers(),
-      error: () => this.error.set('Failed to delete the user.'),
+      next: () => {
+        this.alert.success('User deleted successfully.');
+        this.loadUsers();
+      },
+      error: () => {
+        this.error.set('Failed to delete the user.');
+        this.alert.error('Failed to delete the user.');
+      },
     });
   }
 
@@ -224,10 +234,14 @@ export class Users {
     this.loading.set(true);
     this.error.set('');
     this.userService.add(payload).subscribe({
-      next: () => this.loadUsers(),
+      next: () => {
+        this.alert.success('Admin user created successfully.');
+        this.loadUsers();
+      },
       error: () => {
         this.loading.set(false);
         this.error.set('Failed to create the admin user.');
+        this.alert.error('Failed to create the admin user.');
       },
     });
   }

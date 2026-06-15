@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { MenuService } from '../../services/menu-service';
 import { AuthService } from '../../services/auth-service';
+import { AlertService } from '../../services/alert-service';
 import { environment } from '../../../environments/environment';
 import { Menu, PERMISSION_ACTIONS, PermissionAction } from '../../models/menu.model';
 
@@ -22,6 +23,7 @@ export class Menus {
   private fb = inject(FormBuilder);
   private menuService = inject(MenuService);
   private auth = inject(AuthService);
+  private alert = inject(AlertService);
 
   protected readonly actions = PERMISSION_ACTIONS;
 
@@ -163,21 +165,29 @@ export class Menus {
       next: () => {
         this.saving.set(false);
         this.showForm.set(false);
+        this.alert.success(`Menu ${id == null ? 'created' : 'updated'} successfully.`);
         this.load();
       },
       error: () => {
         this.saving.set(false);
         this.formError.set('Failed to save the menu.');
+        this.alert.error('Failed to save the menu.');
       },
     });
   }
 
-  remove(menu: Menu) {
+  async remove(menu: Menu) {
     if (menu.id == null) return;
-    if (!confirm(`Delete menu "${menu.menuName}"?`)) return;
+    if (!(await this.alert.confirmDelete(`menu "${menu.menuName}"`))) return;
     this.menuService.delete(menu.id).subscribe({
-      next: () => this.load(),
-      error: () => this.error.set('Failed to delete the menu.'),
+      next: () => {
+        this.alert.success('Menu deleted successfully.');
+        this.load();
+      },
+      error: () => {
+        this.error.set('Failed to delete the menu.');
+        this.alert.error('Failed to delete the menu.');
+      },
     });
   }
 
@@ -212,10 +222,14 @@ export class Menus {
         }),
       ),
     ).subscribe({
-      next: () => this.load(),
+      next: () => {
+        this.alert.success('Default menus created successfully.');
+        this.load();
+      },
       error: () => {
         this.loading.set(false);
         this.error.set('Failed to seed default menus.');
+        this.alert.error('Failed to seed default menus.');
       },
     });
   }

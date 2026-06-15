@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { ChartOfAccountService } from '../../services/chart-of-account-service';
 import { AuthService } from '../../services/auth-service';
+import { AlertService } from '../../services/alert-service';
 import { Ledger as LedgerModel } from '../../models/ledger.model';
 import { ChartOfAccount } from '../../models/chart-of-account.model';
 
@@ -22,6 +23,7 @@ export class Ledger {
   private service = inject(LedgerService);
   private accountService = inject(ChartOfAccountService);
   private auth = inject(AuthService);
+  private alert = inject(AlertService);
 
   protected readonly ledgers = signal<LedgerModel[]>([]);
   protected readonly groups = signal<ChartOfAccount[]>([]);
@@ -221,21 +223,29 @@ export class Ledger {
       next: () => {
         this.saving.set(false);
         this.showForm.set(false);
+        this.alert.success(`Ledger ${id == null ? 'created' : 'updated'} successfully.`);
         this.loadLedgers();
       },
       error: () => {
         this.saving.set(false);
         this.formError.set('Failed to save the ledger.');
+        this.alert.error('Failed to save the ledger.');
       },
     });
   }
 
-  remove(ledger: LedgerModel) {
+  async remove(ledger: LedgerModel) {
     if (ledger.id == null) return;
-    if (!confirm(`Delete ledger "${ledger.ledgerName}"?`)) return;
+    if (!(await this.alert.confirmDelete(`ledger "${ledger.ledgerName}"`))) return;
     this.service.delete(ledger.id).subscribe({
-      next: () => this.loadLedgers(),
-      error: () => this.error.set('Failed to delete the ledger.'),
+      next: () => {
+        this.alert.success('Ledger deleted successfully.');
+        this.loadLedgers();
+      },
+      error: () => {
+        this.error.set('Failed to delete the ledger.');
+        this.alert.error('Failed to delete the ledger.');
+      },
     });
   }
 

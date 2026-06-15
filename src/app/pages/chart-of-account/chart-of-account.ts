@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ChartOfAccountService } from '../../services/chart-of-account-service';
+import { AlertService } from '../../services/alert-service';
 import {
   ACCOUNT_NATURES,
   ChartOfAccount as Account,
@@ -22,6 +23,7 @@ interface FlatTreeRow extends FlatNode<ChartTreeNode> {
 export class ChartOfAccount {
   private fb = inject(FormBuilder);
   private service = inject(ChartOfAccountService);
+  private alert = inject(AlertService);
 
   protected readonly natures = ACCOUNT_NATURES;
 
@@ -171,36 +173,49 @@ export class ChartOfAccount {
     this.saving.set(true);
     this.formError.set('');
     const request = id == null ? this.service.add(payload) : this.service.update(id, payload);
+    const isEdit = id != null;
     request.subscribe({
       next: () => {
         this.saving.set(false);
         this.showForm.set(false);
+        this.alert.success(`Account ${isEdit ? 'updated' : 'created'} successfully.`);
         this.refresh();
       },
       error: () => {
         this.saving.set(false);
         this.formError.set('Failed to save the account.');
+        this.alert.error('Failed to save the account.');
       },
     });
   }
 
-  remove(account: Account | ChartTreeNode) {
+  async remove(account: Account | ChartTreeNode) {
     if (account.id == null) return;
-    if (!confirm(`Delete account "${account.name}" and its sub-accounts?`)) return;
+    if (!(await this.alert.confirmDelete(`account "${account.name}" and its sub-accounts`))) return;
     this.service.delete(account.id).subscribe({
-      next: () => this.refresh(),
-      error: () => this.error.set('Failed to delete the account.'),
+      next: () => {
+        this.alert.success('Account deleted successfully.');
+        this.refresh();
+      },
+      error: () => {
+        this.error.set('Failed to delete the account.');
+        this.alert.error('Failed to delete the account.');
+      },
     });
   }
 
-  seed() {
-    if (!confirm('Seed the default chart of accounts?')) return;
+  async seed() {
+    if (!(await this.alert.confirm('Seed accounts?', 'Seed the default chart of accounts?', 'Yes, seed'))) return;
     this.loading.set(true);
     this.service.seed().subscribe({
-      next: () => this.refresh(),
+      next: () => {
+        this.alert.success('Default accounts seeded successfully.');
+        this.refresh();
+      },
       error: () => {
         this.loading.set(false);
         this.error.set('Failed to seed accounts.');
+        this.alert.error('Failed to seed accounts.');
       },
     });
   }
