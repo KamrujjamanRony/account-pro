@@ -31,6 +31,12 @@ export const routes: Routes = [
         title: `Ledger | ${companyName}`,
       },
       {
+        path: 'voucher',
+        loadComponent: () => import('./pages/voucher/voucher').then(m => m.Voucher),
+        data: { breadcrumb: 'Voucher' },
+        title: `Voucher | ${companyName}`,
+      },
+      {
         path: 'user-list',
         loadComponent: () => import('./pages/users/users').then(m => m.Users),
         data: { breadcrumb: 'User List' },

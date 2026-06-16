@@ -39,6 +39,11 @@ export class Sidebar {
       icon: 'M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm4 0v14M8 9h8M8 13h8M8 17h5',
     },
     {
+      label: 'Voucher',
+      path: '/voucher',
+      icon: 'M9 2h6a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-3 2V4a2 2 0 0 1 2-2Zm0 6h6M9 12h6',
+    },
+    {
       label: 'Users',
       path: '/user-list',
       icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',

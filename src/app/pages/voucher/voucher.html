@@ -1,0 +1,299 @@
+<div class="mx-auto max-w-7xl px-4 pb-12">
+  <!-- Header -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Voucher</h1>
+      <p class="text-sm text-neutral-500">Record and manage double-entry vouchers.</p>
+    </div>
+    <button
+      type="button"
+      (click)="openCreate()"
+      class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+    >
+      + New voucher
+    </button>
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div>
+      <label for="v-type" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Type</label>
+      <select id="v-type" [value]="typeFilter()" (change)="typeFilter.set($any($event.target).value); loadVouchers()"
+        class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+        <option value="">All types</option>
+        @for (t of types; track t.code) {
+          <option [value]="t.code">{{ t.label }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label for="v-from" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">From date</label>
+      <input id="v-from" type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value); loadVouchers()"
+        class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+    </div>
+    <div>
+      <label for="v-to" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">To date</label>
+      <input id="v-to" type="date" [value]="toDate()" (change)="toDate.set($any($event.target).value); loadVouchers()"
+        class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+    </div>
+    <div>
+      <label for="v-search" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Search</label>
+      <input id="v-search" type="search" placeholder="No, reference, narration…"
+        [value]="search()" (input)="search.set($any($event.target).value)"
+        class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+    </div>
+    <div class="flex items-end">
+      <button type="button" (click)="clearFilters()"
+        class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <table class="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
+      <thead class="bg-neutral-600 dark:bg-neutral-800/50">
+        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-100">
+          <th scope="col" class="px-4 py-3">Voucher No</th>
+          <th scope="col" class="px-4 py-3">Date</th>
+          <th scope="col" class="px-4 py-3">Type</th>
+          <th scope="col" class="px-4 py-3">Reference</th>
+          <th scope="col" class="px-4 py-3">Narration</th>
+          <th scope="col" class="px-4 py-3 text-right">Amount</th>
+          <th scope="col" class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+        @if (loading()) {
+          <tr><td colspan="7" class="px-4 py-8 text-center text-neutral-500">Loading…</td></tr>
+        } @else if (filteredVouchers().length === 0) {
+          <tr><td colspan="7" class="px-4 py-8 text-center text-neutral-500">No vouchers found. Create one to get started.</td></tr>
+        } @else {
+          @for (voucher of filteredVouchers(); track voucher.id) {
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+              <td class="px-4 py-3 font-medium text-neutral-900 dark:text-white">{{ voucher.voucherNo || ('#' + voucher.id) }}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-neutral-600 dark:text-neutral-400">{{ voucher.voucherDate | date:'mediumDate' }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">
+                  {{ typeLabel(voucher.type) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ voucher.reference || '—' }}</td>
+              <td class="px-4 py-3 max-w-xs truncate text-neutral-600 dark:text-neutral-400">{{ voucher.narration || '—' }}</td>
+              <td class="px-4 py-3 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ voucherAmount(voucher) | number:'1.2-2' }}</td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                <button type="button" (click)="openEdit(voucher)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                <button type="button" (click)="remove(voucher)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+      <tfoot class="bg-neutral-600 dark:bg-neutral-800/50">
+        <tr class="text-xs font-semibold uppercase tracking-wide text-neutral-100 dark:text-neutral-200">
+          <th scope="row" colspan="5" class="px-4 py-3 text-right">Total</th>
+          <td class="px-4 py-3 text-right tabular-nums">{{ totalAmount() | number:'1.2-2' }}</td>
+          <td class="px-4 py-3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Form dialog -->
+@if (showForm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="voucher-form-title">
+    <div class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <h2 id="voucher-form-title" class="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
+        {{ editingId() ? 'Edit voucher' : 'New voucher' }}
+      </h2>
+
+      @if (formError()) {
+        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formError() }}</div>
+      }
+
+      @if (loadingDetail()) {
+        <p class="py-8 text-center text-sm text-neutral-500">Loading voucher…</p>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+          <!-- Header fields -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label for="form-type" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Type</label>
+              <select id="form-type" formControlName="type"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                @for (t of types; track t.code) {
+                  <option [value]="t.code">{{ t.label }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label for="form-date" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Date</label>
+              <input id="form-date" type="date" formControlName="voucherDate"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+              @if (form.controls.voucherDate.touched && form.controls.voucherDate.invalid) {
+                <p class="mt-1 text-xs text-red-600">Date is required.</p>
+              }
+            </div>
+            <div>
+              <label for="form-reference" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Reference</label>
+              <input id="form-reference" type="text" formControlName="reference"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+            </div>
+          </div>
+
+          <!-- Detail lines -->
+          <div>
+            <div class="mb-2 flex items-center justify-between">
+              <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300">Entries</label>
+              <button type="button" (click)="addLine()"
+                class="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+                + Add line
+              </button>
+            </div>
+
+            <div
+              class="rounded-lg border border-neutral-200 dark:border-neutral-800"
+              [class.overflow-x-auto]="openLine() === null"
+              [class.overflow-visible]="openLine() !== null"
+            >
+              <table class="min-w-full text-sm">
+                <thead class="bg-neutral-100 dark:bg-neutral-800/60">
+                  <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    <th scope="col" class="px-3 py-2">Ledger</th>
+                    <th scope="col" class="px-3 py-2 text-right">Debit</th>
+                    <th scope="col" class="px-3 py-2 text-right">Credit</th>
+                    <th scope="col" class="px-3 py-2">Remarks</th>
+                    <th scope="col" class="w-10 px-3 py-2"><span class="sr-only">Remove</span></th>
+                  </tr>
+                </thead>
+                <tbody formArrayName="details" class="divide-y divide-neutral-100 dark:divide-neutral-800">
+                  @for (line of lines.controls; track $index; let i = $index) {
+                    <tr [formGroupName]="i" class="align-top">
+                      <!-- Ledger combobox -->
+                      <td class="px-3 py-2">
+                        <div class="relative" (click)="$event.stopPropagation()">
+                          <button type="button" (click)="toggleLineDropdown(i, $event)"
+                            role="combobox" aria-haspopup="listbox" [attr.aria-expanded]="openLine() === i"
+                            [attr.aria-label]="'Select ledger for line ' + (i + 1)"
+                            class="flex w-full min-w-44 items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                            <span [class.text-neutral-400]="line.get('ledgerId')?.value == null">
+                              {{ line.get('ledgerId')?.value != null ? ledgerName(line.get('ledgerId')?.value) : 'Select ledger…' }}
+                            </span>
+                            <svg class="h-4 w-4 shrink-0 text-neutral-400 transition-transform" [class.rotate-180]="openLine() === i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <path d="m6 9 6 6 6-6" />
+                            </svg>
+                          </button>
+                          @if (openLine() === i) {
+                            <div class="absolute z-20 mt-1 w-64 rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+                              <div class="p-2">
+                                <input type="search" placeholder="Search ledgers…"
+                                  [value]="lineSearch()" (input)="lineSearch.set($any($event.target).value)"
+                                  aria-label="Search ledgers"
+                                  class="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-600 dark:bg-neutral-900" />
+                              </div>
+                              <ul role="listbox" class="max-h-56 overflow-y-auto pb-1">
+                                @for (l of filteredLedgers(); track l.id) {
+                                  <li role="option" [attr.aria-selected]="line.get('ledgerId')?.value === l.id">
+                                    <button type="button" (click)="selectLineLedger(i, l)"
+                                      class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                                      [class]="line.get('ledgerId')?.value === l.id ? 'bg-primary-50 dark:bg-primary-950' : ''">
+                                      <span>{{ l.ledgerName }}</span>
+                                      @if (line.get('ledgerId')?.value === l.id) {
+                                        <svg class="h-4 w-4 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                          <path d="M20 6 9 17l-5-5" />
+                                        </svg>
+                                      }
+                                    </button>
+                                  </li>
+                                } @empty {
+                                  <li class="px-3 py-3 text-center text-sm text-neutral-500">No ledgers found.</li>
+                                }
+                              </ul>
+                            </div>
+                          }
+                          @if (line.get('ledgerId')?.touched && line.get('ledgerId')?.invalid) {
+                            <p class="mt-1 text-xs text-red-600">Required.</p>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-3 py-2">
+                        <input type="number" min="0" step="0.01" formControlName="debit" inputmode="decimal"
+                          [attr.aria-label]="'Debit for line ' + (i + 1)"
+                          class="w-28 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-right text-sm tabular-nums focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+                      </td>
+                      <td class="px-3 py-2">
+                        <input type="number" min="0" step="0.01" formControlName="credit" inputmode="decimal"
+                          [attr.aria-label]="'Credit for line ' + (i + 1)"
+                          class="w-28 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-right text-sm tabular-nums focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+                      </td>
+                      <td class="px-3 py-2">
+                        <input type="text" formControlName="remarks"
+                          [attr.aria-label]="'Remarks for line ' + (i + 1)"
+                          class="w-full min-w-36 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+                      </td>
+                      <td class="px-3 py-2 text-center">
+                        <button type="button" (click)="removeLine(i)" [disabled]="lines.length <= 2"
+                          [attr.aria-label]="'Remove line ' + (i + 1)"
+                          class="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-red-950/40">
+                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="bg-neutral-50 dark:bg-neutral-800/40">
+                  <tr class="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+                    <td class="px-3 py-2 text-right">Total</td>
+                    <td class="px-3 py-2 text-right tabular-nums">{{ totalDebit() | number:'1.2-2' }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums">{{ totalCredit() | number:'1.2-2' }}</td>
+                    <td colspan="2" class="px-3 py-2">
+                      @if (isBalanced()) {
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                          Balanced
+                        </span>
+                      } @else {
+                        <span class="text-xs font-medium text-red-600">Difference: {{ difference() | number:'1.2-2' }}</span>
+                      }
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <label for="form-narration" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Narration</label>
+            <textarea id="form-narration" rows="2" formControlName="narration"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"></textarea>
+          </div>
+
+          <div>
+            <label for="form-cost" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Cost center</label>
+            <input id="form-cost" type="text" formControlName="costCenter"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" (click)="closeForm()"
+              class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
+            <button type="submit" [disabled]="saving()"
+              class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
+              {{ saving() ? 'Saving…' : 'Save voucher' }}
+            </button>
+          </div>
+        </form>
+      }
+    </div>
+  </div>
+}
