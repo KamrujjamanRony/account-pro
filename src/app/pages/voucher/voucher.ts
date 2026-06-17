@@ -1,13 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { VoucherService } from '../../services/voucher-service';
 import { LedgerService } from '../../services/ledger-service';
 import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
 import { Voucher as VoucherModel, VOUCHER_TYPES } from '../../models/voucher.model';
 import { Ledger } from '../../models/ledger.model';
+import { VoucherService } from '../../services/voucher-service';
 
 @Component({
   selector: 'app-voucher',
@@ -59,17 +58,22 @@ export class Voucher {
     details: this.fb.array([this.newLine(), this.newLine()]),
   });
 
-  /** Live snapshot of the detail rows, so totals recompute as the user types. */
-  private readonly detailsValue = toSignal(this.lines.valueChanges, {
-    initialValue: this.lines.getRawValue(),
-  });
+  // Bumped on every change to the detail lines (value edits, add, remove) so
+  // the totals recompute. We use an explicit signal rather than
+  // valueChanges → toSignal because the auto-zero/lock logic mutates controls
+  // with emitEvent:false and the app runs zoneless change detection, which
+  // makes array-level valueChanges propagation unreliable for this. Totals
+  // read getRawValue() so locked (disabled) lines still count.
+  private readonly recalc = signal(0);
 
-  protected readonly totalDebit = computed(() =>
-    this.detailsValue().reduce((sum, l) => sum + (Number(l.debit) || 0), 0),
-  );
-  protected readonly totalCredit = computed(() =>
-    this.detailsValue().reduce((sum, l) => sum + (Number(l.credit) || 0), 0),
-  );
+  protected readonly totalDebit = computed(() => {
+    this.recalc();
+    return this.lines.getRawValue().reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
+  });
+  protected readonly totalCredit = computed(() => {
+    this.recalc();
+    return this.lines.getRawValue().reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
+  });
   protected readonly difference = computed(() => this.totalDebit() - this.totalCredit());
   protected readonly isBalanced = computed(
     () => this.totalDebit() > 0 && Math.abs(this.difference()) < 0.005,
@@ -180,27 +184,49 @@ export class Voucher {
       credit: [detail?.credit ?? 0, Validators.min(0)],
       remarks: [detail?.remarks ?? ''],
     });
-    // A line is one-sided: entering a debit clears the credit and vice versa.
+    // A line is one-sided: the side carrying a value locks (disables) the other.
+    // Driven at the control level so it applies on create, on edit (loaded
+    // values), and as the user types.
+    const lock = () => {
+      const debit = Number(group.controls.debit.value) || 0;
+      const credit = Number(group.controls.credit.value) || 0;
+      if (debit > 0) group.controls.credit.disable({ emitEvent: false });
+      else group.controls.credit.enable({ emitEvent: false });
+      if (credit > 0) group.controls.debit.disable({ emitEvent: false });
+      else group.controls.debit.enable({ emitEvent: false });
+    };
     group.controls.debit.valueChanges.subscribe(value => {
       if (value && group.controls.credit.value) {
         group.controls.credit.setValue(0, { emitEvent: false });
       }
+      lock();
+      this.bump();
     });
     group.controls.credit.valueChanges.subscribe(value => {
       if (value && group.controls.debit.value) {
         group.controls.debit.setValue(0, { emitEvent: false });
       }
+      lock();
+      this.bump();
     });
+    lock(); // initial state — handles values loaded in edit mode
     return group;
+  }
+
+  /** Signal the totals to recompute from the current line values. */
+  private bump() {
+    this.recalc.update(n => n + 1);
   }
 
   addLine() {
     this.lines.push(this.newLine());
+    this.bump();
   }
 
   removeLine(index: number) {
     if (this.lines.length <= 2) return;
     this.lines.removeAt(index);
+    this.bump();
   }
 
   // ---- per-row ledger combobox ----
@@ -237,6 +263,7 @@ export class Voucher {
     });
     this.openLine.set(null);
     this.showForm.set(true);
+    this.bump();
   }
 
   openEdit(voucher: VoucherModel) {
@@ -280,6 +307,7 @@ export class Voucher {
       costCenter: voucher.costCenter ?? '',
       narration: voucher.narration ?? '',
     });
+    this.bump();
   }
 
   closeForm() {
