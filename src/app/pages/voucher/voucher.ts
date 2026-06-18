@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
@@ -151,6 +151,11 @@ export class Voucher {
     return this.typeBehavior().lockFirst && index === 0;
   }
 
+  /** A line can be removed unless it's the locked first row or the minimum two. */
+  canRemoveLine(index: number): boolean {
+    return !this.isLedgerLocked(index) && this.lines.length > 2;
+  }
+
   /**
    * Configure the entry grid for the given voucher type. When `reset` is true
    * (create, or the user switching type) the lines are rebuilt and the locked
@@ -190,7 +195,7 @@ export class Voucher {
             this.cacheNames(list);
             const first = list[0];
             if (first) firstLedger?.setValue(first.id, { emitEvent: false });
-            this.bump();
+            this.refreshLines();
           },
           error: () => {},
         });
@@ -198,6 +203,9 @@ export class Voucher {
     } else {
       firstLedger?.enable({ emitEvent: false });
     }
+
+    // Apply the debit/credit locks (and the row-1 auto amount) for this type.
+    this.refreshLines();
   }
 
   private cacheNames(list: LedgerOption[]) {
@@ -274,33 +282,83 @@ export class Voucher {
       credit: [detail?.credit ?? 0, Validators.min(0)],
       remarks: [detail?.remarks ?? ''],
     });
-    // A line is one-sided: the side carrying a value locks (disables) the other.
-    // Driven at the control level so it applies on create, on edit (loaded
-    // values), and as the user types.
-    const lock = () => {
-      const debit = Number(group.controls.debit.value) || 0;
-      const credit = Number(group.controls.credit.value) || 0;
-      if (debit > 0) group.controls.credit.disable({ emitEvent: false });
-      else group.controls.credit.enable({ emitEvent: false });
-      if (credit > 0) group.controls.debit.disable({ emitEvent: false });
-      else group.controls.debit.enable({ emitEvent: false });
-    };
-    group.controls.debit.valueChanges.subscribe(value => {
-      if (value && group.controls.credit.value) {
-        group.controls.credit.setValue(0, { emitEvent: false });
-      }
-      lock();
-      this.bump();
-    });
-    group.controls.credit.valueChanges.subscribe(value => {
-      if (value && group.controls.debit.value) {
-        group.controls.debit.setValue(0, { emitEvent: false });
-      }
-      lock();
-      this.bump();
-    });
-    lock(); // initial state — handles values loaded in edit mode
+    // Any edit re-applies the type-driven locks and recomputes totals.
+    group.controls.debit.valueChanges.subscribe(() => this.refreshLines());
+    group.controls.credit.valueChanges.subscribe(() => this.refreshLines());
     return group;
+  }
+
+  /** Re-apply line locks/auto-amounts, then recompute totals. */
+  private refreshLines() {
+    this.syncLineLocks();
+    this.bump();
+  }
+
+  /**
+   * Enforce the debit/credit locking rules for the current voucher type:
+   * - receipt (firstSide 'debit'): all debit fields locked; row 1 debit = Σ credits.
+   * - payment (firstSide 'credit'): all credit fields locked; row 1 credit = Σ debits.
+   * - JV / Contra: per-row one-sided lock (a value on one side locks the other).
+   * All mutations use emitEvent:false to avoid feedback loops.
+   */
+  private syncLineLocks() {
+    const behavior = this.typeBehavior();
+    const lines = this.lines;
+    const count = lines.length;
+
+    if (behavior.firstSide) {
+      const receipt = behavior.firstSide === 'debit';
+      let total = 0;
+      for (let i = 0; i < count; i++) {
+        const debit = lines.at(i).get('debit')!;
+        const credit = lines.at(i).get('credit')!;
+        // The locked side: all of one column, plus the first row's other cell.
+        const locked = receipt ? credit : debit; // the editable column control
+        const fixed = receipt ? debit : credit; // the always-locked column control
+        this.setDisabled(fixed, true);
+        if (i === 0) {
+          this.setDisabled(locked, true);
+          this.setZero(locked);
+        } else {
+          this.setDisabled(locked, false);
+          total += Number(locked.value) || 0;
+        }
+      }
+      const firstFixed = receipt ? lines.at(0).get('debit')! : lines.at(0).get('credit')!;
+      if ((Number(firstFixed.value) || 0) !== total) {
+        firstFixed.setValue(total, { emitEvent: false });
+      }
+      return;
+    }
+
+    // JV / Contra: per-row one-sided locking based on which side has a value.
+    for (let i = 0; i < count; i++) {
+      const debit = lines.at(i).get('debit')!;
+      const credit = lines.at(i).get('credit')!;
+      const dv = Number(debit.value) || 0;
+      const cv = Number(credit.value) || 0;
+      if (dv > 0) {
+        this.setZero(credit);
+        this.setDisabled(credit, true);
+        this.setDisabled(debit, false);
+      } else if (cv > 0) {
+        this.setZero(debit);
+        this.setDisabled(debit, true);
+        this.setDisabled(credit, false);
+      } else {
+        this.setDisabled(debit, false);
+        this.setDisabled(credit, false);
+      }
+    }
+  }
+
+  private setDisabled(ctrl: AbstractControl, disabled: boolean) {
+    if (disabled && ctrl.enabled) ctrl.disable({ emitEvent: false });
+    else if (!disabled && ctrl.disabled) ctrl.enable({ emitEvent: false });
+  }
+
+  private setZero(ctrl: AbstractControl) {
+    if ((Number(ctrl.value) || 0) !== 0) ctrl.setValue(0, { emitEvent: false });
   }
 
   /** Signal the totals to recompute from the current line values. */
@@ -310,14 +368,14 @@ export class Voucher {
 
   addLine() {
     this.lines.push(this.newLine());
-    this.bump();
+    this.refreshLines();
   }
 
   removeLine(index: number) {
     if (this.lines.length <= 2) return;
     if (this.isLedgerLocked(index)) return; // keep the auto-set first ledger
     this.lines.removeAt(index);
-    this.bump();
+    this.refreshLines();
   }
 
   // ---- per-row ledger combobox ----
@@ -400,9 +458,9 @@ export class Voucher {
       // Don't trigger the type subscription (which would wipe the loaded lines).
       { emitEvent: false },
     );
-    // Apply option lists / lock state for the loaded type without resetting rows.
+    // Apply option lists / lock state for the loaded type without resetting
+    // rows (applyType calls refreshLines, which recomputes locks and totals).
     this.applyType(type, false);
-    this.bump();
   }
 
   closeForm() {

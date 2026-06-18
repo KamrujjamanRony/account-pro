@@ -241,13 +241,15 @@
                           class="w-full min-w-36 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
                       </td>
                       <td class="px-3 py-2 text-center">
-                        <button type="button" (click)="removeLine(i)" [disabled]="lines.length <= 2"
-                          [attr.aria-label]="'Remove line ' + (i + 1)"
-                          class="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-red-950/40">
-                          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                          </svg>
-                        </button>
+                        @if (canRemoveLine(i)) {
+                          <button type="button" (click)="removeLine(i)"
+                            [attr.aria-label]="'Remove line ' + (i + 1)"
+                            class="rounded p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                            </svg>
+                          </button>
+                        }
                       </td>
                     </tr>
                   }

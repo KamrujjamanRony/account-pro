@@ -71,6 +71,13 @@ export interface VoucherTypeBehavior {
   firstSection?: string;
   /** Every line's ledger picker is limited to cash & bank ledgers (Contra). */
   cashBankAll: boolean;
+  /**
+   * Side that the locked first (cash/bank) ledger sits on:
+   * - 'debit'  → receipt: row 1 debit = Σ(other credits); all debit fields locked.
+   * - 'credit' → payment: row 1 credit = Σ(other debits); all credit fields locked.
+   * Undefined → free entry with per-row one-sided locking (JV, Contra).
+   */
+  firstSide?: 'debit' | 'credit';
 }
 
 export const DEFAULT_VOUCHER_BEHAVIOR: VoucherTypeBehavior = {
@@ -79,10 +86,10 @@ export const DEFAULT_VOUCHER_BEHAVIOR: VoucherTypeBehavior = {
 };
 
 export const VOUCHER_TYPE_BEHAVIOR: Record<string, VoucherTypeBehavior> = {
-  CR: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false },
-  CP: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false },
-  BR: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false },
-  BP: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false },
+  CR: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false, firstSide: 'debit' },
+  CP: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false, firstSide: 'credit' },
+  BR: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false, firstSide: 'debit' },
+  BP: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false, firstSide: 'credit' },
   CV: { lockFirst: false, cashBankAll: true },
   JV: { lockFirst: false, cashBankAll: false },
 };
