@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
@@ -30,6 +30,7 @@ export class Voucher {
   private ledgerService = inject(LedgerService);
   private auth = inject(AuthService);
   private alert = inject(AlertService);
+  private cdr = inject(ChangeDetectorRef);
 
   protected readonly types = VOUCHER_TYPES;
 
@@ -98,8 +99,11 @@ export class Voucher {
   );
 
   protected readonly ledgerNameById = computed(() => {
-    const map = new Map<number, string>(this.extraNames());
+    const map = new Map<number, string>();
     for (const l of this.ledgers()) if (l.id != null) map.set(l.id, l.ledgerName);
+    // CashBankBalance names (e.g. "Cash In Hand(548100.00)") win over the plain
+    // ledger-list names, so the locked first ledger shows the API label.
+    for (const [id, name] of this.extraNames()) map.set(id, name);
     return map;
   });
 
@@ -179,6 +183,7 @@ export class Voucher {
         next: list => {
           this.cashBankLedgers.set(list);
           this.cacheNames(list);
+          this.cdr.markForCheck();
         },
         error: () => this.cashBankLedgers.set([]),
       });
@@ -196,6 +201,7 @@ export class Voucher {
             const first = list[0];
             if (first) firstLedger?.setValue(first.id, { emitEvent: false });
             this.refreshLines();
+            this.cdr.markForCheck();
           },
           error: () => {},
         });
@@ -295,10 +301,12 @@ export class Voucher {
   }
 
   /**
-   * Enforce the debit/credit locking rules for the current voucher type:
-   * - receipt (firstSide 'debit'): all debit fields locked; row 1 debit = Σ credits.
-   * - payment (firstSide 'credit'): all credit fields locked; row 1 credit = Σ debits.
-   * - JV / Contra: per-row one-sided lock (a value on one side locks the other).
+   * Keep line VALUES consistent with the voucher type. The read-only (locked)
+   * state of each cell is decided in the template by {@link isAmountReadonly};
+   * here we only zero the locked cells and auto-fill the first row's total.
+   * - receipt (firstSide 'debit'): all debit cells 0; row 1 debit = Σ credits.
+   * - payment (firstSide 'credit'): all credit cells 0; row 1 credit = Σ debits.
+   * - JV / Contra: a value on one side zeroes the other (one-sided line).
    * All mutations use emitEvent:false to avoid feedback loops.
    */
   private syncLineLocks() {
@@ -312,17 +320,11 @@ export class Voucher {
       for (let i = 0; i < count; i++) {
         const debit = lines.at(i).get('debit')!;
         const credit = lines.at(i).get('credit')!;
-        // The locked side: all of one column, plus the first row's other cell.
-        const locked = receipt ? credit : debit; // the editable column control
-        const fixed = receipt ? debit : credit; // the always-locked column control
-        this.setDisabled(fixed, true);
-        if (i === 0) {
-          this.setDisabled(locked, true);
-          this.setZero(locked);
-        } else {
-          this.setDisabled(locked, false);
-          total += Number(locked.value) || 0;
-        }
+        const editable = receipt ? credit : debit; // user enters here on rows 2+
+        const fixed = receipt ? debit : credit; // always zero (row 1 gets the total)
+        this.setZero(fixed);
+        if (i === 0) this.setZero(editable);
+        else total += Number(editable.value) || 0;
       }
       const firstFixed = receipt ? lines.at(0).get('debit')! : lines.at(0).get('credit')!;
       if ((Number(firstFixed.value) || 0) !== total) {
@@ -331,30 +333,30 @@ export class Voucher {
       return;
     }
 
-    // JV / Contra: per-row one-sided locking based on which side has a value.
+    // JV / Contra: a value on one side clears the other.
     for (let i = 0; i < count; i++) {
       const debit = lines.at(i).get('debit')!;
       const credit = lines.at(i).get('credit')!;
       const dv = Number(debit.value) || 0;
       const cv = Number(credit.value) || 0;
-      if (dv > 0) {
-        this.setZero(credit);
-        this.setDisabled(credit, true);
-        this.setDisabled(debit, false);
-      } else if (cv > 0) {
-        this.setZero(debit);
-        this.setDisabled(debit, true);
-        this.setDisabled(credit, false);
-      } else {
-        this.setDisabled(debit, false);
-        this.setDisabled(credit, false);
-      }
+      if (dv > 0 && cv) this.setZero(credit);
+      else if (cv > 0 && dv) this.setZero(debit);
     }
   }
 
-  private setDisabled(ctrl: AbstractControl, disabled: boolean) {
-    if (disabled && ctrl.enabled) ctrl.disable({ emitEvent: false });
-    else if (!disabled && ctrl.disabled) ctrl.enable({ emitEvent: false });
+  /** Whether a debit/credit cell is locked (read-only) for the current type. */
+  isAmountReadonly(index: number, side: 'debit' | 'credit'): boolean {
+    const behavior = this.typeBehavior();
+    if (behavior.firstSide) {
+      const receipt = behavior.firstSide === 'debit';
+      const lockedColumn = receipt ? 'debit' : 'credit'; // whole column is locked
+      if (side === lockedColumn) return true;
+      return index === 0; // the editable column is locked only on the first row
+    }
+    // JV / Contra: a side is locked when the other side carries a value.
+    const line = this.lines.at(index);
+    const other = side === 'debit' ? line.get('credit')?.value : line.get('debit')?.value;
+    return (Number(other) || 0) > 0;
   }
 
   private setZero(ctrl: AbstractControl) {
