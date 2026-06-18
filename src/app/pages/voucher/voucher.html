@@ -181,9 +181,10 @@
                       <td class="px-3 py-2">
                         <div class="relative" (click)="$event.stopPropagation()">
                           <button type="button" (click)="toggleLineDropdown(i, $event)"
+                            [disabled]="isLedgerLocked(i)"
                             role="combobox" aria-haspopup="listbox" [attr.aria-expanded]="openLine() === i"
                             [attr.aria-label]="'Select ledger for line ' + (i + 1)"
-                            class="flex w-full min-w-44 items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                            class="flex w-full min-w-44 items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:disabled:bg-neutral-900">
                             <span [class.text-neutral-400]="line.get('ledgerId')?.value == null">
                               {{ line.get('ledgerId')?.value != null ? ledgerName(line.get('ledgerId')?.value) : 'Select ledger…' }}
                             </span>

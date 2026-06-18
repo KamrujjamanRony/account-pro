@@ -49,10 +49,40 @@ export interface VoucherTypeOption {
 }
 
 export const VOUCHER_TYPES: readonly VoucherTypeOption[] = [
-  { code: 'JV', label: 'Journal Voucher' },
   { code: 'CR', label: 'Cash Receipt' },
   { code: 'CP', label: 'Cash Payment' },
   { code: 'BR', label: 'Bank Receipt' },
   { code: 'BP', label: 'Bank Payment' },
   { code: 'CV', label: 'Contra Voucher' },
+  { code: 'JV', label: 'Journal Voucher' },
 ];
+
+/** Minimal ledger shape used by the line ledger pickers. */
+export interface LedgerOption {
+  id: number;
+  ledgerName: string;
+}
+
+/** How the entry grid behaves for a given voucher type. */
+export interface VoucherTypeBehavior {
+  /** Row 1 is auto-filled from CashBankBalance and its ledger field is locked. */
+  lockFirst: boolean;
+  /** `section` passed to CashBankBalance to source the locked first ledger. */
+  firstSection?: string;
+  /** Every line's ledger picker is limited to cash & bank ledgers (Contra). */
+  cashBankAll: boolean;
+}
+
+export const DEFAULT_VOUCHER_BEHAVIOR: VoucherTypeBehavior = {
+  lockFirst: false,
+  cashBankAll: false,
+};
+
+export const VOUCHER_TYPE_BEHAVIOR: Record<string, VoucherTypeBehavior> = {
+  CR: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false },
+  CP: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false },
+  BR: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false },
+  BP: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false },
+  CV: { lockFirst: false, cashBankAll: true },
+  JV: { lockFirst: false, cashBankAll: false },
+};

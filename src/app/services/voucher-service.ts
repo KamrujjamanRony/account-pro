@@ -3,13 +3,37 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { Voucher, VoucherSearchQuery, VoucherSearchResult } from '../models/voucher.model';
+import { LedgerOption, Voucher, VoucherSearchQuery, VoucherSearchResult } from '../models/voucher.model';
 import { ApiResponse, PagedResult } from '../models/api-response.model';
 
 @Service()
 export class VoucherService {
   private http = inject(HttpClient);
   private baseUrl = `${environment.apiUrl}/Voucher`;
+
+  /**
+   * Cash & bank ledgers from the report endpoint. `section` selects the subset:
+   * "" → all cash & bank, "Cash-in-Hand" → cash, "Cash-at-Bank" → bank.
+   */
+  cashBankBalances(section = ''): Observable<LedgerOption[]> {
+    type Row = Record<string, unknown>;
+    return this.http
+      .post<ApiResponse<Row[] | { items?: Row[] }>>(`${environment.apiUrl}/Report/CashBankBalance`, {
+        section,
+      })
+      .pipe(
+        map(res => {
+          const data = res.data;
+          const rows = Array.isArray(data) ? data : data?.items ?? [];
+          return rows
+            .map(r => ({
+              id: Number(r['ledgerId'] ?? r['id'] ?? r['ledgerID'] ?? 0),
+              ledgerName: String(r['ledgerName'] ?? r['name'] ?? r['ledger'] ?? ''),
+            }))
+            .filter(o => o.id > 0);
+        }),
+      );
+  }
 
   search(query: VoucherSearchQuery = {}): Observable<VoucherSearchResult> {
     type SearchData = Voucher[] | (PagedResult<Voucher> & { count?: number });

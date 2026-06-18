@@ -4,7 +4,13 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
-import { Voucher as VoucherModel, VOUCHER_TYPES } from '../../models/voucher.model';
+import {
+  DEFAULT_VOUCHER_BEHAVIOR,
+  LedgerOption,
+  Voucher as VoucherModel,
+  VOUCHER_TYPE_BEHAVIOR,
+  VOUCHER_TYPES,
+} from '../../models/voucher.model';
 import { Ledger } from '../../models/ledger.model';
 import { VoucherService } from '../../services/voucher-service';
 
@@ -49,8 +55,20 @@ export class Voucher {
   protected readonly openLine = signal<number | null>(null);
   protected readonly lineSearch = signal('');
 
+  // ---- type-driven behaviour ----
+  /** Cash & bank ledgers (Contra picks from these). */
+  protected readonly cashBankLedgers = signal<LedgerOption[]>([]);
+  /** Currently selected voucher type, mirrored from the form for reactivity. */
+  protected readonly voucherType = signal<string>(VOUCHER_TYPES[0].code);
+  /** Names for ledgers that come from CashBankBalance but not the full list. */
+  private readonly extraNames = signal<Map<number, string>>(new Map());
+
+  protected readonly typeBehavior = computed(
+    () => VOUCHER_TYPE_BEHAVIOR[this.voucherType()] ?? DEFAULT_VOUCHER_BEHAVIOR,
+  );
+
   protected readonly form = this.fb.nonNullable.group({
-    type: ['JV', Validators.required],
+    type: [VOUCHER_TYPES[0].code, Validators.required],
     voucherDate: [this.today(), Validators.required],
     reference: [''],
     costCenter: [''],
@@ -80,14 +98,22 @@ export class Voucher {
   );
 
   protected readonly ledgerNameById = computed(() => {
-    const map = new Map<number, string>();
+    const map = new Map<number, string>(this.extraNames());
     for (const l of this.ledgers()) if (l.id != null) map.set(l.id, l.ledgerName);
     return map;
   });
 
+  /** Ledger options for the line pickers, narrowed by the voucher type. */
+  protected readonly ledgerOptions = computed<LedgerOption[]>(() => {
+    if (this.typeBehavior().cashBankAll) return this.cashBankLedgers();
+    return this.ledgers()
+      .filter(l => l.id != null)
+      .map(l => ({ id: l.id as number, ledgerName: l.ledgerName }));
+  });
+
   protected readonly filteredLedgers = computed(() => {
     const term = this.lineSearch().trim().toLowerCase();
-    const list = this.ledgers();
+    const list = this.ledgerOptions();
     if (!term) return list;
     return list.filter(l => l.ledgerName.toLowerCase().includes(term));
   });
@@ -112,10 +138,74 @@ export class Voucher {
   constructor() {
     this.loadVouchers();
     this.loadLedgers();
+    // A user-driven type change rebuilds the entry grid for that type.
+    this.form.controls.type.valueChanges.subscribe(type => this.applyType(type, true));
   }
 
   get lines() {
     return this.form.controls.details;
+  }
+
+  /** Row 1's ledger is fixed (auto-set) for cash/bank voucher types. */
+  isLedgerLocked(index: number): boolean {
+    return this.typeBehavior().lockFirst && index === 0;
+  }
+
+  /**
+   * Configure the entry grid for the given voucher type. When `reset` is true
+   * (create, or the user switching type) the lines are rebuilt and the locked
+   * first ledger is auto-selected; otherwise (edit) the loaded lines are kept
+   * and only the option lists / lock state are applied.
+   */
+  private applyType(type: string, reset: boolean) {
+    this.voucherType.set(type);
+    const behavior = this.typeBehavior();
+
+    if (reset) {
+      this.lines.clear();
+      this.lines.push(this.newLine());
+      this.lines.push(this.newLine());
+      this.bump();
+    }
+
+    // Contra: every picker is limited to cash & bank ledgers.
+    if (behavior.cashBankAll) {
+      this.service.cashBankBalances('').subscribe({
+        next: list => {
+          this.cashBankLedgers.set(list);
+          this.cacheNames(list);
+        },
+        error: () => this.cashBankLedgers.set([]),
+      });
+    } else {
+      this.cashBankLedgers.set([]);
+    }
+
+    const firstLedger = this.lines.at(0)?.get('ledgerId');
+    if (behavior.lockFirst) {
+      firstLedger?.disable({ emitEvent: false });
+      if (reset && behavior.firstSection) {
+        this.service.cashBankBalances(behavior.firstSection).subscribe({
+          next: list => {
+            this.cacheNames(list);
+            const first = list[0];
+            if (first) firstLedger?.setValue(first.id, { emitEvent: false });
+            this.bump();
+          },
+          error: () => {},
+        });
+      }
+    } else {
+      firstLedger?.enable({ emitEvent: false });
+    }
+  }
+
+  private cacheNames(list: LedgerOption[]) {
+    this.extraNames.update(prev => {
+      const map = new Map(prev);
+      for (const o of list) map.set(o.id, o.ledgerName);
+      return map;
+    });
   }
 
   typeLabel(code: string): string {
@@ -225,6 +315,7 @@ export class Voucher {
 
   removeLine(index: number) {
     if (this.lines.length <= 2) return;
+    if (this.isLedgerLocked(index)) return; // keep the auto-set first ledger
     this.lines.removeAt(index);
     this.bump();
   }
@@ -240,9 +331,9 @@ export class Voucher {
     this.openLine.set(null);
   }
 
-  selectLineLedger(index: number, ledger: Ledger) {
+  selectLineLedger(index: number, ledger: LedgerOption) {
     const line = this.lines.at(index);
-    line.get('ledgerId')?.setValue(ledger.id ?? null);
+    line.get('ledgerId')?.setValue(ledger.id);
     line.get('ledgerId')?.markAsTouched();
     this.openLine.set(null);
   }
@@ -251,19 +342,16 @@ export class Voucher {
   openCreate() {
     this.editingId.set(null);
     this.formError.set('');
-    this.lines.clear();
-    this.lines.push(this.newLine());
-    this.lines.push(this.newLine());
-    this.form.reset({
-      type: 'JV',
-      voucherDate: this.today(),
-      reference: '',
-      costCenter: '',
-      narration: '',
-    });
+    const type = VOUCHER_TYPES[0].code;
+    // emitEvent:false so the type subscription doesn't double-run; applyType
+    // below rebuilds the grid for the default type.
+    this.form.reset(
+      { type, voucherDate: this.today(), reference: '', costCenter: '', narration: '' },
+      { emitEvent: false },
+    );
     this.openLine.set(null);
     this.showForm.set(true);
-    this.bump();
+    this.applyType(type, true);
   }
 
   openEdit(voucher: VoucherModel) {
@@ -300,13 +388,20 @@ export class Voucher {
       );
     }
     while (this.lines.length < 2) this.lines.push(this.newLine());
-    this.form.patchValue({
-      type: voucher.type ?? 'JV',
-      voucherDate: (voucher.voucherDate ?? '').slice(0, 10) || this.today(),
-      reference: voucher.reference ?? '',
-      costCenter: voucher.costCenter ?? '',
-      narration: voucher.narration ?? '',
-    });
+    const type = voucher.type ?? VOUCHER_TYPES[0].code;
+    this.form.patchValue(
+      {
+        type,
+        voucherDate: (voucher.voucherDate ?? '').slice(0, 10) || this.today(),
+        reference: voucher.reference ?? '',
+        costCenter: voucher.costCenter ?? '',
+        narration: voucher.narration ?? '',
+      },
+      // Don't trigger the type subscription (which would wipe the loaded lines).
+      { emitEvent: false },
+    );
+    // Apply option lists / lock state for the loaded type without resetting rows.
+    this.applyType(type, false);
     this.bump();
   }
 
