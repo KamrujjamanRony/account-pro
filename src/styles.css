@@ -31,6 +31,31 @@ body {
   height: 100%;
 }
 
+/* Per-route entrance: the routed component is inserted right after its
+   <router-outlet> and recreated on each navigation, so this animation replays
+   on every page change. */
+router-outlet + * {
+  display: block;
+  animation: route-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes route-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  router-outlet + * {
+    animation: none;
+  }
+}
+
 /* Print: show only the report sheet (`.print-area`), drop the app shell. Used
    by the Cash Book / Bank Book reports so the PDF carries just the document. */
 @media print {

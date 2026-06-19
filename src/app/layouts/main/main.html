@@ -1,9 +1,18 @@
 <div
-  class="min-h-screen flex flex-col flex-auto shrink-0 antialiased bg-white text-black dark:bg-dark-surface dark:text-white"
+  class="relative min-h-screen flex flex-col flex-auto shrink-0 overflow-hidden antialiased bg-neutral-50 text-black dark:bg-dark-surface dark:text-white"
 >
+  <!-- Ambient animated background -->
+  <div class="app-ambient" aria-hidden="true">
+    <span class="app-blob app-blob-1"></span>
+    <span class="app-blob app-blob-2"></span>
+  </div>
+
   <app-sidebar />
-  <div class="h-full ml-14 mt-14 mb-10 md:ml-64">
+
+  <div class="relative z-10 ml-14 mt-14 mb-10 md:ml-64">
     <app-breadcrumb />
-    <router-outlet></router-outlet>
+    <main class="route-host">
+      <router-outlet></router-outlet>
+    </main>
   </div>
 </div>

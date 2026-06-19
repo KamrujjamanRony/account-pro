@@ -1,78 +1,147 @@
-<div
-  class="flex min-h-screen items-center justify-center bg-neutral-100 px-4 py-12 dark:bg-dark-surface"
->
-  <div
-    class="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-  >
-    <div class="mb-6 text-center">
-      <span
-        class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-lg font-bold text-white"
-        aria-hidden="true"
-        >AP</span
-      >
-      <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">{{ companyName }}</h1>
-      <p class="mt-1 text-sm text-neutral-500">Sign in to your account</p>
+<div class="login-shell grid min-h-screen lg:grid-cols-2">
+  <!-- Brand / illustration panel -->
+  <aside class="brand-panel relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex" aria-hidden="true">
+    <!-- animated ambient blobs -->
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+
+    <div class="relative z-10 flex items-center gap-3">
+      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-sm font-bold backdrop-blur">AP</span>
+      <span class="text-lg font-semibold tracking-wide">{{ companyName }}</span>
     </div>
 
-    @if (error()) {
-      <div
-        role="alert"
-        class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-      >
-        {{ error() }}
-      </div>
-    }
+    <!-- Finance illustration -->
+    <div class="relative z-10 mx-auto w-full max-w-md">
+      <svg viewBox="0 0 420 300" fill="none" class="illustration w-full" xmlns="http://www.w3.org/2000/svg">
+        <!-- dashboard card -->
+        <rect x="40" y="60" width="300" height="180" rx="16" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.25)" />
+        <rect x="60" y="80" width="120" height="12" rx="6" fill="rgba(255,255,255,0.45)" />
+        <rect x="60" y="100" width="80" height="10" rx="5" fill="rgba(255,255,255,0.25)" />
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4" novalidate>
-      <div>
-        <label for="userName" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-          >Username</label
+        <!-- growth line -->
+        <polyline class="trend-line" points="64,200 110,170 150,184 196,140 244,150 300,104"
+          stroke="#a5b4fc" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+        <circle class="trend-dot" cx="300" cy="104" r="5" fill="#fff" />
+
+        <!-- bars -->
+        <rect class="bar bar-a" x="70"  y="150" width="22" height="70" rx="5" fill="rgba(255,255,255,0.35)" />
+        <rect class="bar bar-b" x="110" y="150" width="22" height="70" rx="5" fill="rgba(255,255,255,0.45)" />
+        <rect class="bar bar-c" x="150" y="150" width="22" height="70" rx="5" fill="rgba(255,255,255,0.30)" />
+
+        <!-- floating coins -->
+        <g class="coin coin-1">
+          <circle cx="330" cy="70" r="26" fill="#fcd34d" stroke="#f59e0b" stroke-width="3" />
+          <text x="330" y="79" text-anchor="middle" font-size="26" font-weight="700" fill="#92400e">$</text>
+        </g>
+        <g class="coin coin-2">
+          <circle cx="372" cy="150" r="18" fill="#fde68a" stroke="#f59e0b" stroke-width="2" />
+          <text x="372" y="157" text-anchor="middle" font-size="18" font-weight="700" fill="#92400e">$</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="relative z-10 max-w-md">
+      <h2 class="text-2xl font-bold leading-snug">Manage your accounts with confidence</h2>
+      <p class="mt-2 text-sm text-white/70">Ledgers, vouchers and real-time financial reports — all in one place.</p>
+    </div>
+  </aside>
+
+  <!-- Form panel -->
+  <main class="form-panel flex items-center justify-center px-4 py-12">
+    <div class="form-card w-full max-w-sm">
+      <div class="mb-8 text-center">
+        <span class="badge-pop mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-lg font-bold text-white shadow-lg" aria-hidden="true">AP</span>
+        <h1 class="text-2xl font-bold text-neutral-900 dark:text-white">Welcome back</h1>
+        <p class="mt-1 text-sm text-neutral-500">Sign in to {{ companyName }}</p>
+      </div>
+
+      @if (error()) {
+        <div
+          role="alert"
+          class="error-shake mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
         >
-        <input
-          id="userName"
-          type="text"
-          autocomplete="username"
-          formControlName="userName"
-          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-2 focus:outline-offset-0 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-          [attr.aria-invalid]="form.controls.userName.touched && form.controls.userName.invalid"
-        />
-        @if (form.controls.userName.touched && form.controls.userName.invalid) {
-          <p class="mt-1 text-xs text-red-600">Username is required.</p>
-        }
-      </div>
+          {{ error() }}
+        </div>
+      }
 
-      <div>
-        <label for="password" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-          >Password</label
+      <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4" novalidate>
+        <div class="field" style="--d: 1">
+          <label for="userName" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Username</label>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <input
+              id="userName"
+              type="text"
+              autocomplete="username"
+              formControlName="userName"
+              placeholder="Enter your username"
+              class="form-input"
+              [attr.aria-invalid]="form.controls.userName.touched && form.controls.userName.invalid"
+            />
+          </div>
+          @if (form.controls.userName.touched && form.controls.userName.invalid) {
+            <p class="mt-1 text-xs text-red-600">Username is required.</p>
+          }
+        </div>
+
+        <div class="field" style="--d: 2">
+          <label for="password" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              autocomplete="current-password"
+              formControlName="password"
+              placeholder="Enter your password"
+              class="form-input pr-10"
+              [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+            />
+            <button
+              type="button"
+              (click)="togglePassword()"
+              class="reveal-btn"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              [attr.aria-pressed]="showPassword()"
+            >
+              @if (showPassword()) {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" />
+                </svg>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              }
+            </button>
+          </div>
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <p class="mt-1 text-xs text-red-600">Password is required.</p>
+          }
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="loading()"
+          class="field submit-btn flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-70"
+          style="--d: 3"
         >
-        <input
-          id="password"
-          type="password"
-          autocomplete="current-password"
-          formControlName="password"
-          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-2 focus:outline-offset-0 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
-        />
-        @if (form.controls.password.touched && form.controls.password.invalid) {
-          <p class="mt-1 text-xs text-red-600">Password is required.</p>
-        }
-      </div>
-
-      <button
-        type="submit"
-        [disabled]="loading()"
-        class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        @if (loading()) {
-          <span
-            class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-            aria-hidden="true"
-          ></span>
-          Signing in…
-        } @else {
-          Sign in
-        }
-      </button>
-    </form>
-  </div>
+          @if (loading()) {
+            <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true"></span>
+            Signing in…
+          } @else {
+            Sign in
+          }
+        </button>
+      </form>
+    </div>
+  </main>
 </div>

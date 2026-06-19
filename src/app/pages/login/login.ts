@@ -19,6 +19,11 @@ export class Login {
   protected readonly companyName = environment.companyName;
   protected readonly loading = signal(false);
   protected readonly error = signal('');
+  protected readonly showPassword = signal(false);
+
+  togglePassword() {
+    this.showPassword.update(v => !v);
+  }
 
   protected readonly form = this.fb.nonNullable.group({
     userName: ['', Validators.required],

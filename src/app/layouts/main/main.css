@@ -1,0 +1,48 @@
+:host {
+  display: contents;
+}
+
+/* Ambient animated background — subtle, decorative, behind all content. */
+.app-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.app-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.16;
+}
+
+.app-blob-1 {
+  width: 480px;
+  height: 480px;
+  background: #6366f1;
+  top: -160px;
+  right: -120px;
+  animation: app-float 18s ease-in-out infinite;
+}
+
+.app-blob-2 {
+  width: 420px;
+  height: 420px;
+  background: #8b5cf6;
+  bottom: -180px;
+  left: -100px;
+  animation: app-float 22s ease-in-out infinite reverse;
+}
+
+@keyframes app-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-blob {
+    animation: none;
+  }
+}
