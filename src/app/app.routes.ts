@@ -90,14 +90,14 @@ export const routes: Routes = [
         path: 'user-list',
         loadComponent: () => import('./pages/users/users').then(m => m.Users),
         canActivate: [permissionGuard],
-        data: { breadcrumb: 'User List', menu: 'Users' },
+        data: { breadcrumb: 'User List', menu: 'User' },
         title: `User List | ${companyName}`,
       },
       {
         path: 'menu-list',
         loadComponent: () => import('./pages/menus/menus').then(m => m.Menus),
         canActivate: [permissionGuard],
-        data: { breadcrumb: 'Menu List', menu: 'Menus' },
+        data: { breadcrumb: 'Menu List', menu: 'Menu' },
         title: `Menu List | ${companyName}`,
       }
     ]
