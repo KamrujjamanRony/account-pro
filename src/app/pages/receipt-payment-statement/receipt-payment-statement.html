@@ -1,0 +1,127 @@
+<div class="mx-auto max-w-5xl px-4 pb-12">
+  <!-- Toolbar (hidden when printing) -->
+  <div class="no-print">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Receipt &amp; Payment Statement</h1>
+        <p class="text-sm text-neutral-500">
+          Opening, receipts &amp; payments, and closing across your cash &amp; bank ledgers for a date range.
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="print()"
+        [disabled]="!canPrint()"
+        class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+        </svg>
+        Print / Save PDF
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-[1fr_1fr_auto] dark:border-neutral-800 dark:bg-neutral-900">
+      <div>
+        <label for="r-from" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">From date</label>
+        <input id="r-from" type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="r-to" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">To date</label>
+        <input id="r-to" type="date" [value]="toDate()" (change)="toDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div class="flex items-end">
+        <button type="button" (click)="generate()" [disabled]="loading()"
+          class="w-full rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100">
+          {{ loading() ? 'Loading…' : 'Generate' }}
+        </button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ error() }}
+      </div>
+    }
+  </div>
+
+  <!-- Report sheet (this is what prints) -->
+  @if (loading()) {
+    <p class="py-16 text-center text-sm text-neutral-500">Generating receipt &amp; payment statement…</p>
+  } @else if (report(); as r) {
+    <div class="print-area rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-10 dark:border-neutral-800 dark:bg-white dark:text-neutral-900">
+      <!-- Letterhead -->
+      <header class="mb-6 text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ r.companyName }}</h2>
+        <p class="mt-1 text-base font-semibold text-neutral-800">{{ r.title }}</p>
+        <p class="mt-0.5 text-sm font-medium text-neutral-600">
+          Date: {{ fmtDate(r.fromDate) }} to {{ fmtDate(r.toDate) }}
+          @if (r.option) { | Option: {{ r.option }} }
+        </p>
+      </header>
+
+      <table class="report-table w-full border-collapse text-sm">
+        <thead>
+          <tr class="border-y-2 border-neutral-700 text-left align-bottom">
+            <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Ledger</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Receipt</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Payment</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (section of sections(); track $index) {
+            <!-- Section heading (A / B / C) -->
+            <tr>
+              <th scope="row" colspan="3" class="pt-4 pb-1 text-left font-bold text-neutral-800 italic">{{ section.sectionTitle }}</th>
+            </tr>
+
+            @for (group of section.groups; track $index) {
+              <!-- Group heading -->
+              <tr>
+                <th scope="row" colspan="3" class="pt-2 pb-1 text-left font-semibold text-neutral-700">{{ group.groupName }}</th>
+              </tr>
+              @for (line of group.lines; track $index) {
+                <tr class="border-t border-neutral-200">
+                  <td class="py-2 pr-3 text-neutral-700">{{ line.ledger }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.receipt | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.payment | number:'1.2-2' }}</td>
+                </tr>
+              }
+              <!-- Group sub total (shown when the group has more than one line) -->
+              @if (group.lines.length > 1) {
+                <tr class="border-t border-neutral-300 font-bold text-neutral-900">
+                  <td class="py-2 pr-3">Sub Total :</td>
+                  <td class="py-2 pl-3 text-right tabular-nums">{{ group.subTotalReceipt | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums">{{ group.subTotalPayment | number:'1.2-2' }}</td>
+                </tr>
+              }
+            } @empty {
+              <tr class="border-t border-neutral-200">
+                <td colspan="3" class="py-2 text-neutral-400">No entries.</td>
+              </tr>
+            }
+
+            <!-- Section summary -->
+            <tr class="border-t-2 border-neutral-300 font-bold text-neutral-900 italic">
+              <td class="py-2 pr-3">Summary for {{ section.sectionTitle }} :</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ section.summaryReceipt | number:'1.2-2' }}</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ section.summaryPayment | number:'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="border-y-2 border-neutral-700 text-base font-bold text-neutral-900">
+            <td class="py-2.5 pr-3">Grand Total :</td>
+            <td class="py-2.5 pl-3 text-right tabular-nums">{{ r.grandTotalReceipt | number:'1.2-2' }}</td>
+            <td class="py-2.5 pl-3 text-right tabular-nums">{{ r.grandTotalPayment | number:'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  } @else if (hasRun()) {
+    <p class="py-16 text-center text-sm text-neutral-500">No data for the selected period.</p>
+  }
+</div>

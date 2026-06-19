@@ -4,7 +4,17 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
-import { BookKind, CashBookLine, CashBookReport, ReportDateQuery } from '../models/report.model';
+import {
+  BookKind,
+  CashBookLine,
+  CashBookReport,
+  ReceiptPaymentQuery,
+  ReceiptPaymentStatement,
+  ReportDateQuery,
+  RpsGroup,
+  RpsLine,
+  RpsSection,
+} from '../models/report.model';
 
 type Row = Record<string, unknown>;
 
@@ -21,6 +31,72 @@ export class ReportService {
   /** Bank Book — receipts & payments through the bank ledgers for a date range. */
   bankBook(query: ReportDateQuery): Observable<CashBookReport> {
     return this.fetch('BankBook', query, 'bank');
+  }
+
+  /**
+   * Receipt & Payment Statement — opening / receipt & payment / closing,
+   * grouped by ledger group, for a date range.
+   */
+  receiptPaymentStatement(query: ReceiptPaymentQuery): Observable<ReceiptPaymentStatement> {
+    const body: ReceiptPaymentQuery = {
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      groupName: query.groupName ?? null,
+      ledger: query.ledger ?? null,
+    };
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/ReceiptPaymentStatement`, body)
+      .pipe(map(res => this.normalizeStatement(res?.data, query)));
+  }
+
+  private normalizeStatement(data: unknown, query: ReceiptPaymentQuery): ReceiptPaymentStatement {
+    const root = (data ?? {}) as Row;
+    return {
+      companyName: String(
+        this.pick(root, ['companyName', 'company', 'companyTitle']) ?? environment.companyName,
+      ),
+      title: String(this.pick(root, ['title']) ?? 'Receipt & Payment Statement'),
+      option: String(this.pick(root, ['option']) ?? ''),
+      fromDate: String(this.pick(root, ['fromDate', 'dateFrom', 'startDate']) ?? query.fromDate),
+      toDate: String(this.pick(root, ['toDate', 'dateTo', 'endDate']) ?? query.toDate),
+      openingCashBank: this.toSection(this.pick(root, ['openingCashBank']) as Row, 'A. Opening Cash & Bank'),
+      receiptPayment: this.toSection(this.pick(root, ['receiptPayment']) as Row, 'B. Receipt & Payment'),
+      closingCashBank: this.toSection(this.pick(root, ['closingCashBank']) as Row, 'C. Closing Cash & Bank'),
+      grandTotalReceipt: this.num(this.pick(root, ['grandTotalReceipt', 'totalReceipt'])) ?? 0,
+      grandTotalPayment: this.num(this.pick(root, ['grandTotalPayment', 'totalPayment'])) ?? 0,
+    };
+  }
+
+  private toSection(row: Row | null | undefined, defaultTitle: string): RpsSection {
+    const section = (row ?? {}) as Row;
+    const rawGroups = (this.pick(section, ['groups', 'items', 'rows']) as Row[]) ?? [];
+    return {
+      sectionTitle: String(this.pick(section, ['sectionTitle', 'title']) ?? defaultTitle),
+      groups: rawGroups.map(g => this.toGroup(g)),
+      summaryReceipt: this.num(this.pick(section, ['summaryReceipt', 'totalReceipt'])) ?? 0,
+      summaryPayment: this.num(this.pick(section, ['summaryPayment', 'totalPayment'])) ?? 0,
+    };
+  }
+
+  private toGroup(row: Row): RpsGroup {
+    const rawLines = (this.pick(row, ['lines', 'items', 'rows', 'ledgers']) as Row[]) ?? [];
+    const lines = rawLines.map(l => this.toRpsLine(l));
+    return {
+      groupName: String(this.pick(row, ['groupName', 'name', 'group']) ?? ''),
+      lines,
+      subTotalReceipt:
+        this.num(this.pick(row, ['subTotalReceipt'])) ?? lines.reduce((a, l) => a + l.receipt, 0),
+      subTotalPayment:
+        this.num(this.pick(row, ['subTotalPayment'])) ?? lines.reduce((a, l) => a + l.payment, 0),
+    };
+  }
+
+  private toRpsLine(row: Row): RpsLine {
+    return {
+      ledger: String(this.pick(row, ['ledger', 'ledgerName', 'name', 'account']) ?? ''),
+      receipt: this.num(this.pick(row, ['receipt', 'receiptAmount', 'debit', 'dr'])) ?? 0,
+      payment: this.num(this.pick(row, ['payment', 'paymentAmount', 'credit', 'cr'])) ?? 0,
+    };
   }
 
   private fetch(endpoint: string, query: ReportDateQuery, kind: BookKind): Observable<CashBookReport> {
@@ -52,12 +128,16 @@ export class ReportService {
 
     // Some payloads tag opening/closing inside the same rows array; split those
     // out so they render in their own sections rather than as transactions.
-    const opening = this.toLine(
-      (this.pick(root, ['opening', 'openingBalance', 'openingCash', 'openingBank']) as Row) ??
-        rawRows.find(r => this.isSection(r, 'open')) ??
-        null,
-      kind === 'cash' ? 'Cash' : 'Bank',
-    );
+    const openingSubject = kind === 'cash' ? 'Cash' : 'Bank';
+    const openingRaw = this.pick(root, ['opening', 'openingBalance', 'openingCash', 'openingBank']);
+    const openingRows = Array.isArray(openingRaw)
+      ? (openingRaw as Row[])
+      : openingRaw != null
+        ? [openingRaw as Row]
+        : rawRows.filter(r => this.isSection(r, 'open'));
+    const opening = openingRows
+      .map(r => this.toLine(r, openingSubject))
+      .filter((l): l is CashBookLine => l !== null);
     const closing = this.toLine(
       (this.pick(root, ['closing', 'closingBalance', 'closingCash', 'closingBank']) as Row) ??
         rawRows.find(r => this.isSection(r, 'clos')) ??
@@ -75,7 +155,7 @@ export class ReportService {
 
     const grandTotalReceipt =
       this.num(this.pick(root, ['grandTotalReceipt', 'totalReceipt'])) ??
-      (opening?.receipt ?? 0) + subTotalReceipt;
+      opening.reduce((acc, l) => acc + l.receipt, 0) + subTotalReceipt;
     const grandTotalPayment =
       this.num(this.pick(root, ['grandTotalPayment', 'totalPayment'])) ??
       subTotalPayment + (closing?.payment ?? 0);

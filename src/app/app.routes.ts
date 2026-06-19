@@ -37,6 +37,27 @@ export const routes: Routes = [
         title: `Voucher | ${companyName}`,
       },
       {
+        path: 'cash-book',
+        loadComponent: () => import('./pages/cash-bank-book/cash-bank-book').then(m => m.CashBankBook),
+        data: { breadcrumb: 'Cash Book', kind: 'cash' },
+        title: `Cash Book | ${companyName}`,
+      },
+      {
+        path: 'bank-book',
+        loadComponent: () => import('./pages/cash-bank-book/cash-bank-book').then(m => m.CashBankBook),
+        data: { breadcrumb: 'Bank Book', kind: 'bank' },
+        title: `Bank Book | ${companyName}`,
+      },
+      {
+        path: 'receipt-payment-statement',
+        loadComponent: () =>
+          import('./pages/receipt-payment-statement/receipt-payment-statement').then(
+            m => m.ReceiptPaymentStatementPage,
+          ),
+        data: { breadcrumb: 'Receipt & Payment Statement' },
+        title: `Receipt & Payment Statement | ${companyName}`,
+      },
+      {
         path: 'user-list',
         loadComponent: () => import('./pages/users/users').then(m => m.Users),
         data: { breadcrumb: 'User List' },

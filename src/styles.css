@@ -24,3 +24,34 @@ html,
 body {
   height: 100%;
 }
+
+/* Print: show only the report sheet (`.print-area`), drop the app shell. Used
+   by the Cash Book / Bank Book reports so the PDF carries just the document. */
+@media print {
+  app-sidebar,
+  app-breadcrumb,
+  .no-print {
+    display: none !important;
+  }
+
+  /* The main layout offsets content for the fixed sidebar — reset for print. */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}

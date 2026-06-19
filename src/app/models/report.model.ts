@@ -24,8 +24,8 @@ export interface CashBookReport {
   companyName: string;
   fromDate: string;
   toDate: string;
-  /** A. Opening balance row (Receipt = opening cash/bank in hand). */
-  opening: CashBookLine | null;
+  /** A. Opening balance rows (Receipt = opening cash/bank in hand). */
+  opening: CashBookLine[];
   /** B. Receipt & Payment transaction lines. */
   transactions: CashBookLine[];
   /** C. Closing balance row (Payment = closing cash/bank carried forward). */
@@ -48,3 +48,59 @@ export interface ReportDateQuery {
 
 /** Which book a report page renders. Drives endpoint + labels. */
 export type BookKind = 'cash' | 'bank';
+
+/** A single ledger row within a Receipt & Payment Statement group. */
+export interface RpsLine {
+  /** Ledger name/code, e.g. "L-0001" or "Akash-1". */
+  ledger: string;
+  /** Money received (Receipt column). */
+  receipt: number;
+  /** Money paid out (Payment column). */
+  payment: number;
+}
+
+/** A ledger group (e.g. "Cash-at-Bank") within a statement section. */
+export interface RpsGroup {
+  groupName: string;
+  lines: RpsLine[];
+  subTotalReceipt: number;
+  subTotalPayment: number;
+}
+
+/** One of the three statement sections (A. Opening / B. Receipt & Payment / C. Closing). */
+export interface RpsSection {
+  sectionTitle: string;
+  groups: RpsGroup[];
+  summaryReceipt: number;
+  summaryPayment: number;
+}
+
+/**
+ * Receipt & Payment Statement, modelled on the printed layout:
+ * A. Opening Cash & Bank → B. Receipt & Payment → C. Closing Cash & Bank → Grand Total.
+ */
+export interface ReceiptPaymentStatement {
+  /** Company name for the letterhead (falls back to the configured company). */
+  companyName: string;
+  title: string;
+  /** Selected option label, e.g. "Only Cash & Bank Ledger". */
+  option: string;
+  fromDate: string;
+  toDate: string;
+  /** A. Opening Cash & Bank. */
+  openingCashBank: RpsSection;
+  /** B. Receipt & Payment. */
+  receiptPayment: RpsSection;
+  /** C. Closing Cash & Bank. */
+  closingCashBank: RpsSection;
+  grandTotalReceipt: number;
+  grandTotalPayment: number;
+}
+
+/** Filter query for the Receipt & Payment Statement endpoint. */
+export interface ReceiptPaymentQuery extends ReportDateQuery {
+  /** Optional group filter; null = all groups. */
+  groupName?: string | null;
+  /** Optional ledger filter; null = all ledgers. */
+  ledger?: string | null;
+}
