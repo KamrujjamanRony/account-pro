@@ -1,0 +1,35 @@
+/* Keep numeric columns aligned to the top of each row. */
+.report-table th,
+.report-table td {
+  vertical-align: top;
+}
+
+/*
+  Print layout. The global app shell (sidebar, breadcrumb, toolbar) is hidden
+  via the `.no-print` class and the rules in styles.css; here we only refine the
+  report sheet itself so the PDF matches the reference layout: no card chrome,
+  edge-to-edge on an A4 page, and table headers repeated across page breaks.
+*/
+@media print {
+  :host {
+    display: block;
+  }
+
+  .print-area {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    color: #000 !important;
+  }
+
+  .report-table thead {
+    display: table-header-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+}

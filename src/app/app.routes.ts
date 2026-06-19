@@ -58,6 +58,24 @@ export const routes: Routes = [
         title: `Receipt & Payment Statement | ${companyName}`,
       },
       {
+        path: 'general-ledger',
+        loadComponent: () => import('./pages/general-ledger/general-ledger').then(m => m.GeneralLedger),
+        data: { breadcrumb: 'General Ledger' },
+        title: `General Ledger | ${companyName}`,
+      },
+      {
+        path: 'trial-balance',
+        loadComponent: () => import('./pages/trial-balance/trial-balance').then(m => m.TrialBalance),
+        data: { breadcrumb: 'Trial Balance' },
+        title: `Trial Balance | ${companyName}`,
+      },
+      {
+        path: 'balance-sheet',
+        loadComponent: () => import('./pages/balance-sheet/balance-sheet').then(m => m.BalanceSheet),
+        data: { breadcrumb: 'Balance Sheet' },
+        title: `Balance Sheet | ${companyName}`,
+      },
+      {
         path: 'user-list',
         loadComponent: () => import('./pages/users/users').then(m => m.Users),
         data: { breadcrumb: 'User List' },

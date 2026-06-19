@@ -5,15 +5,33 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import {
+  BalanceSheetGroup,
+  BalanceSheetLedger,
+  BalanceSheetQuery,
+  BalanceSheetReport,
+  BalanceSheetSection,
+  BalanceSide,
   BookKind,
   CashBookLine,
   CashBookReport,
+  DebitCredit,
+  GeneralLedgerAccount,
+  GeneralLedgerGroup,
+  GeneralLedgerLine,
+  GeneralLedgerQuery,
+  GeneralLedgerReport,
   ReceiptPaymentQuery,
   ReceiptPaymentStatement,
   ReportDateQuery,
   RpsGroup,
   RpsLine,
   RpsSection,
+  TrialBalanceGroup,
+  TrialBalanceLine,
+  TrialBalanceQuery,
+  TrialBalanceReport,
+  TrialBalanceSection,
+  TrialBalanceTotals,
 } from '../models/report.model';
 
 type Row = Record<string, unknown>;
@@ -47,6 +65,381 @@ export class ReportService {
     return this.http
       .post<ApiResponse<unknown>>(`${this.baseUrl}/ReceiptPaymentStatement`, body)
       .pipe(map(res => this.normalizeStatement(res?.data, query)));
+  }
+
+  /**
+   * Trial Balance — every ledger's Opening / Current / Closing debit-credit
+   * balances, grouped by nature (Asset / Liability / Income / Expense) and
+   * ledger group, for a date range.
+   */
+  trialBalance(query: TrialBalanceQuery): Observable<TrialBalanceReport> {
+    const body: TrialBalanceQuery = {
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      ledger: query.ledger ?? null,
+      groupName: query.groupName ?? null,
+    };
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/TrialBalance-2`, body)
+      .pipe(map(res => this.normalizeTrialBalance(res?.data, query)));
+  }
+
+  /**
+   * General Ledger — every posting for each ledger, grouped by ledger group,
+   * with a per-ledger Sub Total and per-group Summary, for a date range.
+   * Optional {@link GeneralLedgerQuery.groupName}, {@link GeneralLedgerQuery.ledger}
+   * and {@link GeneralLedgerQuery.costCenter} narrow the result server-side.
+   */
+  generalLedger(query: GeneralLedgerQuery): Observable<GeneralLedgerReport> {
+    const body: GeneralLedgerQuery = {
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      groupName: query.groupName ?? null,
+      ledger: query.ledger ?? null,
+      costCenter: query.costCenter ?? null,
+    };
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/GeneralLedger`, body)
+      .pipe(map(res => this.normalizeGeneralLedger(res?.data, query)));
+  }
+
+  /**
+   * Balance Sheet — Assets vs Liabilities snapshot as on a date, grouped into
+   * sections (Current / Non-Current / Equity) → groups, with optional ledger
+   * detail. The endpoint takes the snapshot date and the fiscal-year start.
+   */
+  balanceSheet(query: BalanceSheetQuery): Observable<BalanceSheetReport> {
+    const body: BalanceSheetQuery = {
+      asOfDate: query.asOfDate,
+      fiscalYearStart: query.fiscalYearStart,
+    };
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/BalanceSheet`, body)
+      .pipe(map(res => this.normalizeBalanceSheet(res?.data, query)));
+  }
+
+  /**
+   * Reshape the (loosely-typed) Balance Sheet payload into a
+   * {@link BalanceSheetReport}. The API returns three sibling blocks — `assets`,
+   * `liabilities` and `equity` — each a flat list of groups with a `total`. We
+   * keep Assets as one section and fold Equity into the Liabilities side as its
+   * own section, mirroring the printed layout, so both sides summarise to the
+   * server's `totalAssets` / `totalLiabilitiesAndEquity`.
+   */
+  private normalizeBalanceSheet(data: unknown, query: BalanceSheetQuery): BalanceSheetReport {
+    const root = (data ?? {}) as Row;
+    const assetsRaw = (this.pick(root, ['assets', 'asset']) as Row) ?? {};
+    const liabilitiesRaw = (this.pick(root, ['liabilities', 'liability']) as Row) ?? {};
+    const equityRaw = (this.pick(root, ['equity']) as Row) ?? {};
+
+    const assets = this.toBsSection(assetsRaw, 'Assets');
+    const liabilities = this.toBsSection(liabilitiesRaw, 'Liabilities');
+    const equity = this.toBsSection(equityRaw, 'Equity');
+
+    const totalAssets =
+      this.num(this.pick(root, ['totalAssets'])) ??
+      this.num(this.pick(assetsRaw, ['total'])) ??
+      assets.subTotal;
+    const totalLiabEquity =
+      this.num(this.pick(root, ['totalLiabilitiesAndEquity', 'totalLiabilities'])) ??
+      liabilities.subTotal + equity.subTotal;
+
+    const liabilitySections = [liabilities];
+    if (equity.groups.length) liabilitySections.push(equity);
+
+    return {
+      companyName: String(
+        this.pick(root, ['companyName', 'company', 'companyTitle']) ?? environment.companyName,
+      ),
+      title: String(this.pick(root, ['title']) ?? 'Balance Sheet'),
+      asOfDate: String(
+        this.pick(root, ['asOfDate', 'asOnDate', 'date', 'toDate']) ?? query.asOfDate,
+      ),
+      fiscalYearStart: String(
+        this.pick(root, ['fiscalYearStart', 'fromDate', 'yearStart']) ?? query.fiscalYearStart,
+      ),
+      assets: { title: 'Assets', sections: [assets], summary: totalAssets },
+      liabilities: { title: 'Liabilities', sections: liabilitySections, summary: totalLiabEquity },
+      difference: this.num(this.pick(root, ['difference'])) ?? totalAssets - totalLiabEquity,
+      isBalanced: this.truthy(this.pick(root, ['isBalanced'])),
+    };
+  }
+
+  private toBsSection(row: Row, defaultName: string): BalanceSheetSection {
+    const section = (row ?? {}) as Row;
+    const rawGroups = (this.pick(section, ['groups', 'items', 'rows', 'lines']) as Row[]) ?? [];
+    const groups = rawGroups.map(g => this.toBsGroup(g));
+    return {
+      sectionName: String(this.pick(section, ['title', 'sectionName', 'section', 'name']) ?? defaultName),
+      groups,
+      subTotal:
+        this.num(this.pick(section, ['total', 'subTotal', 'subtotal'])) ??
+        groups.reduce((sum, g) => sum + g.amount, 0),
+    };
+  }
+
+  private toBsGroup(row: Row): BalanceSheetGroup {
+    const rawLedgers = (this.pick(row, ['ledgers', 'accounts', 'items', 'lines', 'rows']) as Row[]) ?? [];
+    const ledgers = rawLedgers.map(l => this.toBsLedger(l));
+    return {
+      groupName: String(this.pick(row, ['groupName', 'group', 'name', 'title']) ?? ''),
+      amount:
+        this.num(this.pick(row, ['subtotal', 'subTotal', 'amount', 'balance', 'total'])) ??
+        ledgers.reduce((sum, l) => sum + l.amount, 0),
+      ledgers,
+    };
+  }
+
+  private toBsLedger(row: Row): BalanceSheetLedger {
+    return {
+      ledgerCode: String(this.pick(row, ['ledgerCode', 'code']) ?? ''),
+      name: String(this.pick(row, ['ledgerName', 'name', 'ledger', 'account']) ?? ''),
+      amount: this.num(this.pick(row, ['amount', 'balance', 'total'])) ?? 0,
+    };
+  }
+
+  private normalizeTrialBalance(data: unknown, query: TrialBalanceQuery): TrialBalanceReport {
+    const root = (data ?? {}) as Row;
+    const rawSections = (this.pick(root, ['sections', 'items', 'rows']) as Row[]) ?? [];
+    return {
+      companyName: String(
+        this.pick(root, ['companyName', 'company', 'companyTitle']) ?? environment.companyName,
+      ),
+      title: String(this.pick(root, ['title']) ?? 'Trial Balance'),
+      fromDate: String(this.pick(root, ['fromDate', 'dateFrom', 'startDate']) ?? query.fromDate),
+      toDate: String(this.pick(root, ['toDate', 'dateTo', 'endDate']) ?? query.toDate),
+      sections: rawSections.map(s => this.toTbSection(s)),
+      grandTotal: {
+        opening: this.toDrCr(this.pick(root, ['grandOpening', 'openingTotal'])),
+        period: this.toDrCr(this.pick(root, ['grandPeriod', 'currentTotal', 'periodTotal'])),
+        closing: this.toDrCr(this.pick(root, ['grandClosing', 'closingTotal'])),
+      },
+    };
+  }
+
+  private toTbSection(row: Row): TrialBalanceSection {
+    const rawLedgers = (this.pick(row, ['ledgers', 'lines', 'items', 'rows']) as Row[]) ?? [];
+    const lines = rawLedgers.map(l => this.toTbLine(l));
+    return {
+      nature: String(this.pick(row, ['nature', 'type', 'natureName']) ?? ''),
+      groups: this.groupTbLines(lines),
+      total: {
+        opening: this.toDrCr(this.pick(row, ['opening', 'openingBalance'])),
+        period: this.toDrCr(this.pick(row, ['period', 'current', 'currentBalance'])),
+        closing: this.toDrCr(this.pick(row, ['closing', 'closingBalance'])),
+      },
+    };
+  }
+
+  private toTbLine(row: Row): TrialBalanceLine {
+    return {
+      ledgerCode: String(this.pick(row, ['ledgerCode', 'code']) ?? ''),
+      ledgerName: String(this.pick(row, ['ledgerName', 'ledger', 'name', 'account']) ?? ''),
+      groupName: String(this.pick(row, ['groupName', 'group']) ?? ''),
+      opening: this.toDrCr(this.pick(row, ['opening', 'openingBalance'])),
+      period: this.toDrCr(this.pick(row, ['period', 'current', 'currentBalance'])),
+      closing: this.toDrCr(this.pick(row, ['closing', 'closingBalance'])),
+    };
+  }
+
+  /** Read a {debit, credit} pair, tolerating dr/cr aliases and missing values. */
+  private toDrCr(value: unknown): DebitCredit {
+    const row = (value ?? {}) as Row;
+    return {
+      debit: this.num(this.pick(row, ['debit', 'dr'])) ?? 0,
+      credit: this.num(this.pick(row, ['credit', 'cr'])) ?? 0,
+    };
+  }
+
+  /** Bucket ledger lines by group name (first-seen order), summing sub totals. */
+  private groupTbLines(lines: TrialBalanceLine[]): TrialBalanceGroup[] {
+    const groups: TrialBalanceGroup[] = [];
+    const byName = new Map<string, TrialBalanceGroup>();
+    for (const line of lines) {
+      let group = byName.get(line.groupName);
+      if (!group) {
+        group = { groupName: line.groupName, lines: [], subTotal: this.zeroTotals() };
+        byName.set(line.groupName, group);
+        groups.push(group);
+      }
+      group.lines.push(line);
+      this.addTotals(group.subTotal, line);
+    }
+    return groups;
+  }
+
+  private zeroTotals(): TrialBalanceTotals {
+    return {
+      opening: { debit: 0, credit: 0 },
+      period: { debit: 0, credit: 0 },
+      closing: { debit: 0, credit: 0 },
+    };
+  }
+
+  private addTotals(total: TrialBalanceTotals, line: TrialBalanceTotals): void {
+    total.opening.debit += line.opening.debit;
+    total.opening.credit += line.opening.credit;
+    total.period.debit += line.period.debit;
+    total.period.credit += line.period.credit;
+    total.closing.debit += line.closing.debit;
+    total.closing.credit += line.closing.credit;
+  }
+
+  /**
+   * Reshape the (loosely-typed) General Ledger payload into a {@link GeneralLedgerReport}.
+   * The payload may already be nested as group → account → lines, or arrive as a
+   * flat array of posting rows tagged with group/ledger, which we bucket here.
+   */
+  private normalizeGeneralLedger(data: unknown, query: GeneralLedgerQuery): GeneralLedgerReport {
+    const root = (data ?? {}) as Row;
+    const groups = Array.isArray(data)
+      ? this.buildGlGroupsFromRows(data as Row[])
+      : ((this.pick(root, ['groups', 'items', 'rows', 'data']) as Row[]) ?? []).map(g => this.toGlGroup(g));
+    return {
+      companyName: String(
+        this.pick(root, ['companyName', 'company', 'companyTitle']) ?? environment.companyName,
+      ),
+      title: String(this.pick(root, ['title']) ?? 'General Ledger'),
+      fromDate: String(this.pick(root, ['fromDate', 'dateFrom', 'startDate']) ?? query.fromDate),
+      toDate: String(this.pick(root, ['toDate', 'dateTo', 'endDate']) ?? query.toDate),
+      costCenter: String(
+        this.pick(root, ['costCenter', 'costCentre']) ?? query.costCenter ?? 'all',
+      ),
+      groups,
+    };
+  }
+
+  /** Bucket flat posting rows by group then ledger (first-seen order) into group structures. */
+  private buildGlGroupsFromRows(rows: Row[]): GeneralLedgerGroup[] {
+    const order: string[] = [];
+    const byGroup = new Map<string, Map<string, Row[]>>();
+    for (const row of rows) {
+      const groupName = String(this.pick(row, ['groupName', 'group']) ?? '');
+      const ledgerName = String(this.pick(row, ['ledgerName', 'ledger', 'account', 'name']) ?? '');
+      let ledgers = byGroup.get(groupName);
+      if (!ledgers) {
+        ledgers = new Map<string, Row[]>();
+        byGroup.set(groupName, ledgers);
+        order.push(groupName);
+      }
+      const lines = ledgers.get(ledgerName);
+      if (lines) lines.push(row);
+      else ledgers.set(ledgerName, [row]);
+    }
+    return order.map(groupName => {
+      const accounts: Row[] = [];
+      for (const [ledgerName, lines] of byGroup.get(groupName)!) {
+        accounts.push({ ledgerName, lines });
+      }
+      return this.toGlGroup({ groupName, accounts });
+    });
+  }
+
+  private toGlGroup(row: Row): GeneralLedgerGroup {
+    const rawAccounts = (this.pick(row, ['accounts', 'ledgers', 'items', 'rows']) as Row[]) ?? [];
+    const accounts = rawAccounts.map(a => this.toGlAccount(a));
+    const summaryDebit =
+      this.num(this.pick(row, ['summaryDebit', 'totalDebit', 'debit'])) ??
+      accounts.reduce((sum, a) => sum + a.subTotalDebit, 0);
+    const summaryCredit =
+      this.num(this.pick(row, ['summaryCredit', 'totalCredit', 'credit'])) ??
+      accounts.reduce((sum, a) => sum + a.subTotalCredit, 0);
+    const closing = this.glGroupClosing(row, accounts);
+    return {
+      groupName: String(this.pick(row, ['groupName', 'group', 'name']) ?? ''),
+      accounts,
+      summaryDebit,
+      summaryCredit,
+      closingBalance: closing.balance,
+      closingSide: closing.side,
+    };
+  }
+
+  private toGlAccount(row: Row): GeneralLedgerAccount {
+    const rawLines = (this.pick(row, ['lines', 'transactions', 'items', 'rows', 'entries']) as Row[]) ?? [];
+    const lines = rawLines.map(l => this.toGlLine(l));
+    const movement = lines.filter(l => !l.isOpening);
+    const subTotalDebit =
+      this.num(this.pick(row, ['subTotalDebit', 'totalDebit'])) ??
+      movement.reduce((sum, l) => sum + l.debit, 0);
+    const subTotalCredit =
+      this.num(this.pick(row, ['subTotalCredit', 'totalCredit'])) ??
+      movement.reduce((sum, l) => sum + l.credit, 0);
+    return {
+      ledgerName: String(this.pick(row, ['ledgerName', 'ledger', 'name', 'account']) ?? ''),
+      lines,
+      subTotalDebit,
+      subTotalCredit,
+      hasSubTotal: movement.length > 1,
+    };
+  }
+
+  private toGlLine(row: Row): GeneralLedgerLine {
+    const narration = String(
+      this.pick(row, ['narration', 'remarks', 'description', 'particulars']) ?? '',
+    );
+    const isOpening =
+      this.truthy(this.pick(row, ['isOpening', 'opening'])) || /^\s*opening/i.test(narration);
+    const balance = this.toBalance(this.pick(row, ['balance', 'runningBalance', 'closingBalance']));
+    return {
+      date: String(this.pick(row, ['date', 'voucherDate', 'vDate', 'transactionDate']) ?? ''),
+      voucherNo: String(this.pick(row, ['voucherNo', 'vchNo', 'voucherId', 'vNo', 'code']) ?? ''),
+      narration,
+      shortNarration: String(this.pick(row, ['shortNarration', 'shortNote', 'narrationShort']) ?? ''),
+      debit: this.num(this.pick(row, ['debit', 'dr', 'debitAmount', 'drAmount'])) ?? 0,
+      credit: this.num(this.pick(row, ['credit', 'cr', 'creditAmount', 'crAmount'])) ?? 0,
+      balance: balance.balance,
+      balanceSide: balance.side,
+      isOpening,
+    };
+  }
+
+  /** Group closing balance: prefer an API value, else sum each account's final running balance. */
+  private glGroupClosing(row: Row, accounts: GeneralLedgerAccount[]): { balance: number; side: BalanceSide } {
+    const apiVal = this.pick(row, ['closingBalance', 'balance', 'summaryBalance']);
+    if (apiVal != null) return this.toBalance(apiVal);
+    let signed = 0;
+    for (const account of accounts) {
+      const last = account.lines[account.lines.length - 1];
+      if (last) signed += last.balanceSide === 'Cr' ? -last.balance : last.balance;
+    }
+    return { balance: Math.abs(signed), side: signed < 0 ? 'Cr' : 'Dr' };
+  }
+
+  /**
+   * Parse a running balance into a {magnitude, side} pair. Tolerates a plain
+   * number (negative ⇒ Cr), a string like "1,060.00 Dr", or a {amount, side} object.
+   */
+  private toBalance(value: unknown): { balance: number; side: BalanceSide } {
+    if (value != null && typeof value === 'object') {
+      const obj = value as Row;
+      const amount = this.num(this.pick(obj, ['amount', 'balance', 'value'])) ?? 0;
+      const side = this.balanceSide(this.pick(obj, ['side', 'drcr', 'type']));
+      return { balance: Math.abs(amount), side: side || (amount < 0 ? 'Cr' : 'Dr') };
+    }
+    if (typeof value === 'string') {
+      const num = this.num(value.replace(/[^0-9.-]/g, '')) ?? 0;
+      const side = this.balanceSide(value) || (num < 0 ? 'Cr' : 'Dr');
+      return { balance: Math.abs(num), side };
+    }
+    const num = this.num(value);
+    if (num == null) return { balance: 0, side: '' };
+    return { balance: Math.abs(num), side: num < 0 ? 'Cr' : 'Dr' };
+  }
+
+  /** Extract a Dr/Cr side from a value, or '' when neither is present. */
+  private balanceSide(value: unknown): BalanceSide {
+    const match = String(value ?? '').match(/\b(dr|cr)\b/i);
+    if (!match) return '';
+    return match[1].toLowerCase() === 'cr' ? 'Cr' : 'Dr';
+  }
+
+  /** Loose truthiness for API flags that may arrive as boolean, number or string. */
+  private truthy(value: unknown): boolean {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') return ['true', '1', 'yes', 'y'].includes(value.trim().toLowerCase());
+    return false;
   }
 
   private normalizeStatement(data: unknown, query: ReceiptPaymentQuery): ReceiptPaymentStatement {

@@ -1,0 +1,158 @@
+<div class="mx-auto max-w-4xl px-4 pb-12">
+  <!-- Toolbar (hidden when printing) -->
+  <div class="no-print">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Balance Sheet</h1>
+        <p class="text-sm text-neutral-500">
+          Assets and liabilities snapshot as on a date, by group or with ledger detail.
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="print()"
+        [disabled]="!canPrint()"
+        class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+        </svg>
+        Print / Save PDF
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-[1fr_1fr_auto] dark:border-neutral-800 dark:bg-neutral-900">
+      <div>
+        <label for="bs-as-of" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">As on date</label>
+        <input id="bs-as-of" type="date" [value]="asOfDate()" (change)="asOfDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="bs-fy-start" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Fiscal year start</label>
+        <input id="bs-fy-start" type="date" [value]="fiscalYearStart()" (change)="fiscalYearStart.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div class="flex items-end">
+        <button type="button" (click)="generate()" [disabled]="loading()"
+          class="w-full rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100">
+          {{ loading() ? 'Loading…' : 'Generate' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Level toggle -->
+    <div class="mb-5 flex items-center gap-2" role="group" aria-label="Detail level">
+      <span class="text-xs font-medium text-neutral-600 dark:text-neutral-400">Level:</span>
+      <button type="button" (click)="setLevel('group')" [attr.aria-pressed]="level() === 'group'"
+        class="rounded-lg border px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        [class.border-primary-600]="level() === 'group'"
+        [class.bg-primary-50]="level() === 'group'"
+        [class.text-primary-700]="level() === 'group'"
+        [class.border-neutral-300]="level() !== 'group'"
+        [class.text-neutral-600]="level() !== 'group'">
+        Group only
+      </button>
+      <button type="button" (click)="setLevel('detail')" [attr.aria-pressed]="level() === 'detail'"
+        class="rounded-lg border px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        [class.border-primary-600]="level() === 'detail'"
+        [class.bg-primary-50]="level() === 'detail'"
+        [class.text-primary-700]="level() === 'detail'"
+        [class.border-neutral-300]="level() !== 'detail'"
+        [class.text-neutral-600]="level() !== 'detail'">
+        With sub-ledgers
+      </button>
+    </div>
+
+    @if (error()) {
+      <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ error() }}
+      </div>
+    }
+  </div>
+
+  <!-- Report sheet (this is what prints) -->
+  @if (loading()) {
+    <p class="py-16 text-center text-sm text-neutral-500">Generating balance sheet…</p>
+  } @else if (report(); as r) {
+    <div class="print-area rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-10 dark:border-neutral-800 dark:bg-white dark:text-neutral-900">
+      <!-- Letterhead -->
+      <header class="mb-6 text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ r.companyName }}</h2>
+        <p class="mt-1 text-base font-semibold text-neutral-800">{{ r.title }}</p>
+        <p class="mt-0.5 text-sm font-medium text-neutral-600">
+          As on Date: {{ fmtDate(r.asOfDate) }} | Level: {{ levelLabel() }}
+        </p>
+      </header>
+
+      <table class="report-table w-full border-collapse text-sm">
+        <thead>
+          <tr class="border-y-2 border-neutral-700 text-left">
+            <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Group</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (side of sides(); track $index) {
+            <!-- Side heading (Assets / Liabilities) -->
+            <tr>
+              <th scope="row" colspan="2" class="pt-4 pb-1 text-left font-bold text-neutral-800 italic">{{ side.title }}</th>
+            </tr>
+
+            @for (section of side.sections; track $index) {
+              <!-- Section heading (skip when it just repeats the side title) -->
+              @if (section.sectionName && section.sectionName !== side.title) {
+                <tr>
+                  <th scope="row" colspan="2" class="pt-2 pb-1 text-left font-semibold text-neutral-700">{{ section.sectionName }}</th>
+                </tr>
+              }
+              @for (group of section.groups; track $index) {
+                <tr class="border-t border-neutral-200">
+                  <td class="py-2 pr-3 text-neutral-700">{{ group.groupName }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ group.amount | number:'1.2-2' }}</td>
+                </tr>
+                @if (showLedgers()) {
+                  @for (ledger of group.ledgers; track $index) {
+                    <tr class="border-t border-neutral-100">
+                      <td class="py-1.5 pr-3 pl-6 text-neutral-500 italic">{{ ledger.name }}</td>
+                      <td class="py-1.5 pl-3 text-right tabular-nums text-neutral-500 italic">{{ ledger.amount | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                }
+              } @empty {
+                <tr class="border-t border-neutral-200">
+                  <td colspan="2" class="py-2 text-neutral-400">No entries.</td>
+                </tr>
+              }
+              <!-- Section sub total (only meaningful when a side has more than one section) -->
+              @if (side.sections.length > 1) {
+                <tr class="border-t border-neutral-300 font-bold text-neutral-900">
+                  <td class="py-2 pr-3">Sub Total :</td>
+                  <td class="py-2 pl-3 text-right tabular-nums">{{ section.subTotal | number:'1.2-2' }}</td>
+                </tr>
+              }
+            }
+
+            <!-- Side summary -->
+            <tr class="border-t-2 border-neutral-300 font-bold text-neutral-900 italic">
+              <td class="py-2 pr-3">Summary for {{ side.title }} :</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ side.summary | number:'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <!-- Balanced check -->
+      @if (!r.isBalanced) {
+        <p class="mt-4 flex items-center justify-between border-t-2 border-red-300 pt-3 text-sm font-semibold text-red-700">
+          <span>Out of balance — Assets do not equal Liabilities &amp; Equity.</span>
+          <span class="tabular-nums">Difference : {{ r.difference | number:'1.2-2' }}</span>
+        </p>
+      } @else {
+        <p class="mt-4 border-t-2 border-green-300 pt-3 text-sm font-semibold text-green-700">Balanced.</p>
+      }
+    </div>
+  } @else if (hasRun()) {
+    <p class="py-16 text-center text-sm text-neutral-500">No data for the selected period.</p>
+  }
+</div>

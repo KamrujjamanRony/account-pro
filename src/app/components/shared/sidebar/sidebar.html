@@ -1,30 +1,34 @@
 <aside
-  class="fixed inset-y-0 left-0 z-40 flex w-14 flex-col border-r border-neutral-200 bg-white transition-all md:w-64 dark:border-neutral-800 dark:bg-dark-surface"
+  class="sidebar fixed inset-y-0 left-0 z-40 flex w-14 flex-col text-neutral-300 transition-all duration-300 md:w-64"
 >
   <!-- Brand -->
-  <div class="flex h-14 items-center gap-2 border-b border-neutral-200 px-3 dark:border-neutral-800">
+  <div class="flex h-16 items-center gap-3 px-3 md:px-4">
     <span
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white"
+      class="brand-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
       aria-hidden="true"
       >AP</span
     >
-    <span class="hidden truncate text-base font-semibold md:block">{{ companyName }}</span>
+    <span class="brand-name hidden truncate text-base font-semibold tracking-wide text-white md:block">
+      {{ companyName }}
+    </span>
   </div>
 
   <!-- Navigation -->
   <nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
     <ul class="space-y-1">
-      @for (item of navItems; track item.path) {
-        <li>
+      @for (item of navItems; track item.path; let i = $index) {
+        <li class="nav-item" [style.animation-delay.ms]="60 + i * 35">
           <a
             [routerLink]="item.path"
-            routerLinkActive="bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"
+            routerLinkActive="nav-active"
             #rla="routerLinkActive"
             [attr.aria-current]="rla.isActive ? 'page' : null"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            [attr.title]="item.label"
+            class="nav-link group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
           >
+            <span class="nav-indicator" aria-hidden="true"></span>
             <svg
-              class="h-5 w-5 shrink-0"
+              class="nav-icon h-5 w-5 shrink-0"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -35,7 +39,7 @@
             >
               <path [attr.d]="item.icon" />
             </svg>
-            <span class="hidden md:block">{{ item.label }}</span>
+            <span class="hidden truncate md:block">{{ item.label }}</span>
           </a>
         </li>
       }
@@ -43,20 +47,29 @@
   </nav>
 
   <!-- User + logout -->
-  <div class="border-t border-neutral-200 p-2 dark:border-neutral-800">
+  <div class="mt-auto px-2 pt-2 pb-3">
+    <div class="sidebar-divider mb-2"></div>
     @if (user(); as u) {
-      <div class="hidden px-2 pb-2 md:block">
-        <p class="truncate text-sm font-medium">{{ u.userName || u.username }}</p>
-        <p class="text-xs text-neutral-500">Signed in</p>
+      <div class="mb-2 hidden items-center gap-3 rounded-xl px-2 py-2 md:flex">
+        <span
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white"
+          aria-hidden="true"
+          >{{ (u.userName || u.username || '?').charAt(0).toUpperCase() }}</span
+        >
+        <span class="min-w-0">
+          <span class="block truncate text-sm font-medium text-white">{{ u.userName || u.username }}</span>
+          <span class="block text-xs text-accent-400">Signed in</span>
+        </span>
       </div>
     }
     <button
       type="button"
       (click)="logout()"
-      class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:hover:bg-red-950/40"
+      [attr.title]="'Logout'"
+      class="logout-btn group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
     >
       <svg
-        class="h-5 w-5 shrink-0"
+        class="nav-icon h-5 w-5 shrink-0"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

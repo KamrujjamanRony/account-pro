@@ -17,6 +17,12 @@
   --color-primary-900: #312e81;
   --color-primary-950: #1e1b4b;
 
+  /* Accent (violet) palette — used for sidebar gradients and active states. */
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-accent-700: #6d28d9;
+
   --color-dark-surface: #0f172a;
 }
 

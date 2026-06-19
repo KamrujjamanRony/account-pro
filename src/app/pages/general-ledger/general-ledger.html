@@ -1,0 +1,152 @@
+<div class="mx-auto max-w-6xl px-4 pb-12">
+  <!-- Toolbar (hidden when printing) -->
+  <div class="no-print">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">General Ledger</h1>
+        <p class="text-sm text-neutral-500">
+          Every posting for each ledger, grouped by ledger group, over a date range.
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="print()"
+        [disabled]="!canPrint()"
+        class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+        </svg>
+        Print / Save PDF
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-900">
+      <div>
+        <label for="gl-from" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">From date</label>
+        <input id="gl-from" type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="gl-to" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">To date</label>
+        <input id="gl-to" type="date" [value]="toDate()" (change)="toDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="gl-group" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Group <span class="font-normal text-neutral-400">(all)</span></label>
+        <input id="gl-group" type="text" placeholder="All groups" [value]="groupName()" (input)="groupName.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="gl-ledger" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Ledger <span class="font-normal text-neutral-400">(all)</span></label>
+        <input id="gl-ledger" type="text" placeholder="All ledgers" [value]="ledger()" (input)="ledger.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="gl-cc" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Cost center <span class="font-normal text-neutral-400">(all)</span></label>
+        <input id="gl-cc" type="text" placeholder="All cost centers" [value]="costCenter()" (input)="costCenter.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div class="flex items-end">
+        <button type="button" (click)="generate()" [disabled]="loading()"
+          class="w-full rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100">
+          {{ loading() ? 'Loading…' : 'Generate' }}
+        </button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ error() }}
+      </div>
+    }
+  </div>
+
+  <!-- Report sheet (this is what prints) -->
+  @if (loading()) {
+    <p class="py-16 text-center text-sm text-neutral-500">Generating general ledger…</p>
+  } @else if (report(); as r) {
+    <div class="print-area rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-10 dark:border-neutral-800 dark:bg-white dark:text-neutral-900">
+      <!-- Letterhead -->
+      <header class="mb-6 text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ r.companyName }}</h2>
+        <p class="mt-1 text-base font-semibold text-neutral-800">{{ r.title }}</p>
+        <p class="mt-0.5 text-sm font-medium text-neutral-600">
+          Date: {{ fmtDate(r.fromDate) }} to {{ fmtDate(r.toDate) }} | Cost Center: {{ r.costCenter }}
+        </p>
+      </header>
+
+      <table class="report-table w-full border-collapse text-sm">
+        <thead>
+          <tr class="border-y-2 border-neutral-700 text-left align-bottom">
+            <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Date</th>
+            <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Vch. No.</th>
+            <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Narration</th>
+            <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Short Narration</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Dr. Amount</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Cr. Amount</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (group of r.groups; track $index) {
+            <!-- Group heading -->
+            <tr>
+              <th scope="row" colspan="7" class="pt-4 pb-1 text-left font-bold text-neutral-800 italic">{{ group.groupName }}</th>
+            </tr>
+
+            @for (account of group.accounts; track $index) {
+              <!-- Ledger account heading -->
+              <tr>
+                <th scope="row" colspan="7" class="pt-2 pb-1 text-left font-semibold text-neutral-700">{{ account.ledgerName }}</th>
+              </tr>
+              @for (line of account.lines; track $index) {
+                <tr class="border-t border-neutral-200">
+                  <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(line.date) }}</td>
+                  <td class="py-2 px-3 whitespace-nowrap text-neutral-700">{{ line.voucherNo }}</td>
+                  <td class="py-2 px-3 text-neutral-700">{{ line.narration }}</td>
+                  <td class="py-2 px-3 text-neutral-700">{{ line.shortNarration }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.debit | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.credit | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3 whitespace-nowrap text-right tabular-nums text-neutral-700">
+                    {{ line.balance | number:'1.2-2' }} {{ line.balanceSide }}
+                  </td>
+                </tr>
+              }
+              <!-- Account sub total (shown when the account has more than one movement line) -->
+              @if (account.hasSubTotal) {
+                <tr class="border-t border-neutral-300 font-bold text-neutral-900">
+                  <td class="py-2 pr-3" colspan="4">Sub Total :</td>
+                  <td class="py-2 pl-3 text-right tabular-nums">{{ account.subTotalDebit | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums">{{ account.subTotalCredit | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3"></td>
+                </tr>
+              }
+            } @empty {
+              <tr class="border-t border-neutral-200">
+                <td colspan="7" class="py-2 text-neutral-400">No entries.</td>
+              </tr>
+            }
+
+            <!-- Group summary -->
+            <tr class="border-t-2 border-neutral-300 font-bold text-neutral-900 italic">
+              <td class="py-2 pr-3" colspan="4">Summary for {{ group.groupName }} :</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ group.summaryDebit | number:'1.2-2' }}</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ group.summaryCredit | number:'1.2-2' }}</td>
+              <td class="py-2 pl-3 whitespace-nowrap text-right tabular-nums">
+                {{ group.closingBalance | number:'1.2-2' }} {{ group.closingSide }}
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="py-6 text-center text-neutral-400">No data for the selected filters.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (hasRun()) {
+    <p class="py-16 text-center text-sm text-neutral-500">No data for the selected period.</p>
+  }
+</div>

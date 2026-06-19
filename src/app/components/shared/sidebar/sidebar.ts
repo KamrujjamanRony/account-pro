@@ -59,6 +59,21 @@ export class Sidebar {
       icon: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 5h10M7 13h10M7 17h6',
     },
     {
+      label: 'General Ledger',
+      path: '/general-ledger',
+      icon: 'M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm4 0v14M8 9h8M8 13h6',
+    },
+    {
+      label: 'Trial Balance',
+      path: '/trial-balance',
+      icon: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M9 3h6M8 12h3m2 0h3M8 16h3m2 0h3',
+    },
+    {
+      label: 'Balance Sheet',
+      path: '/balance-sheet',
+      icon: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 6h16M12 10v10',
+    },
+    {
       label: 'Users',
       path: '/user-list',
       icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',

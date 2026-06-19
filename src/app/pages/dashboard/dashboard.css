@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+/* Staggered entrance for cards/sections (delay set inline via --delay). */
+.dash-rise {
+  animation: dash-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes dash-rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/*
+ * Comparison / progress bars. The width is bound inline to the target %; the
+ * keyframe scales the bar in from the left so it animates on creation (the
+ * widgets mount only once data has loaded).
+ */
+.bar-fill {
+  transform-origin: left center;
+  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Donut reveals with a soft pop; segments fade in with the parent. */
+.donut-svg {
+  animation: donut-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes donut-pop {
+  from {
+    transform: rotate(-90deg) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-90deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-rise,
+  .bar-fill,
+  .donut-svg {
+    animation: none;
+  }
+}
