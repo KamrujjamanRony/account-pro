@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
-import { Breadcrumb } from "../../utils/breadcrumb/breadcrumb";
+import { Topbar } from "../../components/shared/topbar/topbar";
 import { Sidebar } from "../../components/shared/sidebar/sidebar";
 import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-main',
-  imports: [Breadcrumb, RouterOutlet, Sidebar],
+  imports: [Topbar, RouterOutlet, Sidebar],
   templateUrl: './main.html',
   styleUrl: './main.css',
 })
