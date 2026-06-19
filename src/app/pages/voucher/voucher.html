@@ -89,6 +89,7 @@
               <td class="px-4 py-3 max-w-xs truncate text-neutral-600 dark:text-neutral-400">{{ voucher.narration || '—' }}</td>
               <td class="px-4 py-3 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ voucherAmount(voucher) | number:'1.2-2' }}</td>
               <td class="px-4 py-3 text-right whitespace-nowrap">
+                <button type="button" (click)="openView(voucher)" class="rounded px-2 py-1 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">View</button>
                 <button type="button" (click)="openEdit(voucher)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
                 <button type="button" (click)="remove(voucher)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
               </td>
@@ -110,7 +111,13 @@
 <!-- Form dialog -->
 @if (showForm()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="voucher-form-title">
-    <div class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+    <div class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <button type="button" (click)="closeForm()" aria-label="Close"
+        class="absolute right-4 top-4 rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
       <h2 id="voucher-form-title" class="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
         {{ editingId() ? 'Edit voucher' : 'New voucher' }}
       </h2>
@@ -181,10 +188,9 @@
                       <td class="px-3 py-2">
                         <div class="relative" (click)="$event.stopPropagation()">
                           <button type="button" (click)="toggleLineDropdown(i, $event)"
-                            [disabled]="isLedgerLocked(i)"
                             role="combobox" aria-haspopup="listbox" [attr.aria-expanded]="openLine() === i"
                             [attr.aria-label]="'Select ledger for line ' + (i + 1)"
-                            class="flex w-full min-w-44 items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:disabled:bg-neutral-900">
+                            class="flex w-full min-w-44 items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
                             <span [class.text-neutral-400]="line.get('ledgerId')?.value == null">
                               {{ line.get('ledgerId')?.value != null ? ledgerName(line.get('ledgerId')?.value) : 'Select ledger…' }}
                             </span>
@@ -303,6 +309,95 @@
           </div>
         </form>
       }
+    </div>
+  </div>
+}
+
+<!-- View (read-only) dialog -->
+@if (viewing(); as v) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="voucher-view-title">
+    <div class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <button type="button" (click)="closeView()" aria-label="Close"
+        class="absolute right-4 top-4 rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+
+      <div class="mb-4 flex flex-wrap items-center gap-2 pr-8">
+        <h2 id="voucher-view-title" class="text-lg font-semibold text-neutral-900 dark:text-white">
+          {{ v.voucherNo || ('Voucher #' + v.id) }}
+        </h2>
+        <span class="inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">
+          {{ typeLabel(v.type) }}
+        </span>
+      </div>
+
+      <!-- Header details -->
+      <dl class="mb-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-wide text-neutral-500">Date</dt>
+          <dd class="mt-0.5 text-neutral-900 dark:text-neutral-200">{{ v.voucherDate | date:'mediumDate' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-wide text-neutral-500">Reference</dt>
+          <dd class="mt-0.5 text-neutral-900 dark:text-neutral-200">{{ v.reference || '—' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-wide text-neutral-500">Cost center</dt>
+          <dd class="mt-0.5 text-neutral-900 dark:text-neutral-200">{{ v.costCenter || '—' }}</dd>
+        </div>
+      </dl>
+
+      @if (loadingView()) {
+        <p class="py-8 text-center text-sm text-neutral-500">Loading voucher…</p>
+      } @else {
+        <!-- Entries -->
+        <div class="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <table class="min-w-full text-sm">
+            <thead class="bg-neutral-100 dark:bg-neutral-800/60">
+              <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                <th scope="col" class="px-3 py-2">Ledger</th>
+                <th scope="col" class="px-3 py-2 text-right">Debit</th>
+                <th scope="col" class="px-3 py-2 text-right">Credit</th>
+                <th scope="col" class="px-3 py-2">Remarks</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+              @for (d of v.details; track $index) {
+                <tr>
+                  <td class="px-3 py-2 text-neutral-900 dark:text-neutral-200">{{ detailLedgerName(d) }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ d.debit | number:'1.2-2' }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ d.credit | number:'1.2-2' }}</td>
+                  <td class="px-3 py-2 text-neutral-600 dark:text-neutral-400">{{ d.remarks || '—' }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="4" class="px-3 py-6 text-center text-neutral-500">No entries.</td></tr>
+              }
+            </tbody>
+            <tfoot class="bg-neutral-50 dark:bg-neutral-800/40">
+              <tr class="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+                <td class="px-3 py-2 text-right">Total</td>
+                <td class="px-3 py-2 text-right tabular-nums">{{ viewTotalDebit() | number:'1.2-2' }}</td>
+                <td class="px-3 py-2 text-right tabular-nums">{{ viewTotalCredit() | number:'1.2-2' }}</td>
+                <td class="px-3 py-2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        @if (v.narration) {
+          <div class="mt-4">
+            <p class="text-xs font-medium uppercase tracking-wide text-neutral-500">Narration</p>
+            <p class="mt-0.5 text-sm text-neutral-900 dark:text-neutral-200">{{ v.narration }}</p>
+          </div>
+        }
+      }
+
+      <div class="flex justify-end pt-4">
+        <button type="button" (click)="closeView()"
+          class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Close</button>
+      </div>
     </div>
   </div>
 }

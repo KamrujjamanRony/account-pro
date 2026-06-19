@@ -52,6 +52,17 @@ export class Voucher {
   protected readonly loadingDetail = signal(false);
   protected readonly formError = signal('');
 
+  // ---- view (read-only) state ----
+  protected readonly viewing = signal<VoucherModel | null>(null);
+  protected readonly loadingView = signal(false);
+
+  protected readonly viewTotalDebit = computed(() =>
+    (this.viewing()?.details ?? []).reduce((sum, d) => sum + (Number(d.debit) || 0), 0),
+  );
+  protected readonly viewTotalCredit = computed(() =>
+    (this.viewing()?.details ?? []).reduce((sum, d) => sum + (Number(d.credit) || 0), 0),
+  );
+
   // ---- per-row ledger combobox ----
   protected readonly openLine = signal<number | null>(null);
   protected readonly lineSearch = signal('');
@@ -59,6 +70,8 @@ export class Voucher {
   // ---- type-driven behaviour ----
   /** Cash & bank ledgers (Contra picks from these). */
   protected readonly cashBankLedgers = signal<LedgerOption[]>([]);
+  /** Cash/bank ledgers for the locked first row (receipt/payment row 1). */
+  protected readonly firstLedgerOptions = signal<LedgerOption[]>([]);
   /** Currently selected voucher type, mirrored from the form for reactivity. */
   protected readonly voucherType = signal<string>(VOUCHER_TYPES[0].code);
   /** Names for ledgers that come from CashBankBalance but not the full list. */
@@ -107,9 +120,16 @@ export class Voucher {
     return map;
   });
 
-  /** Ledger options for the line pickers, narrowed by the voucher type. */
+  /**
+   * Ledger options for the open picker, narrowed by voucher type and row:
+   * - Contra: cash & bank ledgers for every row.
+   * - receipt/payment row 1: only the cash/bank ledgers of that section.
+   * - everything else: the full ledger list.
+   */
   protected readonly ledgerOptions = computed<LedgerOption[]>(() => {
-    if (this.typeBehavior().cashBankAll) return this.cashBankLedgers();
+    const behavior = this.typeBehavior();
+    if (behavior.cashBankAll) return this.cashBankLedgers();
+    if (behavior.lockFirst && this.openLine() === 0) return this.firstLedgerOptions();
     return this.ledgers()
       .filter(l => l.id != null)
       .map(l => ({ id: l.id as number, ledgerName: l.ledgerName }));
@@ -150,21 +170,21 @@ export class Voucher {
     return this.form.controls.details;
   }
 
-  /** Row 1's ledger is fixed (auto-set) for cash/bank voucher types. */
-  isLedgerLocked(index: number): boolean {
+  /** Row 1 is the dedicated cash/bank line for receipt/payment vouchers. */
+  isFirstCashBankRow(index: number): boolean {
     return this.typeBehavior().lockFirst && index === 0;
   }
 
-  /** A line can be removed unless it's the locked first row or the minimum two. */
+  /** A line can be removed unless it's the cash/bank row or the minimum two. */
   canRemoveLine(index: number): boolean {
-    return !this.isLedgerLocked(index) && this.lines.length > 2;
+    return !this.isFirstCashBankRow(index) && this.lines.length > 2;
   }
 
   /**
    * Configure the entry grid for the given voucher type. When `reset` is true
-   * (create, or the user switching type) the lines are rebuilt and the locked
-   * first ledger is auto-selected; otherwise (edit) the loaded lines are kept
-   * and only the option lists / lock state are applied.
+   * (create, or the user switching type) the lines are rebuilt and the first
+   * cash/bank ledger is auto-selected; otherwise (edit) the loaded lines are
+   * kept and only the option lists are (re)loaded.
    */
   private applyType(type: string, reset: boolean) {
     this.voucherType.set(type);
@@ -191,23 +211,23 @@ export class Voucher {
       this.cashBankLedgers.set([]);
     }
 
-    const firstLedger = this.lines.at(0)?.get('ledgerId');
-    if (behavior.lockFirst) {
-      firstLedger?.disable({ emitEvent: false });
-      if (reset && behavior.firstSection) {
-        this.service.cashBankBalances(behavior.firstSection).subscribe({
-          next: list => {
-            this.cacheNames(list);
-            const first = list[0];
-            if (first) firstLedger?.setValue(first.id, { emitEvent: false });
-            this.refreshLines();
-            this.cdr.markForCheck();
-          },
-          error: () => {},
-        });
-      }
+    // Receipt/payment: row 1 picks from the section's cash/bank ledgers. The
+    // first is selected by default but the user may choose another (e.g. a
+    // different bank). The ledger control stays enabled so it's selectable.
+    if (behavior.lockFirst && behavior.firstSection) {
+      const firstLedger = this.lines.at(0)?.get('ledgerId');
+      this.service.cashBankBalances(behavior.firstSection).subscribe({
+        next: list => {
+          this.firstLedgerOptions.set(list);
+          this.cacheNames(list);
+          if (reset && list[0]) firstLedger?.setValue(list[0].id, { emitEvent: false });
+          this.refreshLines();
+          this.cdr.markForCheck();
+        },
+        error: () => this.firstLedgerOptions.set([]),
+      });
     } else {
-      firstLedger?.enable({ emitEvent: false });
+      this.firstLedgerOptions.set([]);
     }
 
     // Apply the debit/credit locks (and the row-1 auto amount) for this type.
@@ -375,7 +395,7 @@ export class Voucher {
 
   removeLine(index: number) {
     if (this.lines.length <= 2) return;
-    if (this.isLedgerLocked(index)) return; // keep the auto-set first ledger
+    if (this.isFirstCashBankRow(index)) return; // keep the cash/bank row
     this.lines.removeAt(index);
     this.refreshLines();
   }
@@ -469,6 +489,31 @@ export class Voucher {
     this.showForm.set(false);
   }
 
+  // ---- view (read-only) ----
+  openView(voucher: VoucherModel) {
+    if (voucher.id == null) return;
+    this.viewing.set(voucher);
+    this.loadingView.set(true);
+    // The list row may not carry detail lines, so fetch the full voucher.
+    this.service.getById(voucher.id).subscribe({
+      next: full => {
+        this.viewing.set(full);
+        this.loadingView.set(false);
+        this.cdr.markForCheck();
+      },
+      error: () => this.loadingView.set(false),
+    });
+  }
+
+  closeView() {
+    this.viewing.set(null);
+  }
+
+  /** Resolve a detail line's ledger name, preferring the API-supplied label. */
+  detailLedgerName(detail: { ledgerId: number; ledgerName?: string | null }): string {
+    return detail.ledgerName ?? this.ledgerName(detail.ledgerId);
+  }
+
   save() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -483,7 +528,7 @@ export class Voucher {
         ledgerId: d.ledgerId as number,
         debit: Number(d.debit) || 0,
         credit: Number(d.credit) || 0,
-        remarks: (d.remarks ?? '').trim() || null,
+        remarks: (d.remarks ?? '').trim() || "",
       }));
 
     if (details.length < 2) {
@@ -500,9 +545,9 @@ export class Voucher {
     const payload: VoucherModel = {
       type: raw.type,
       voucherDate: raw.voucherDate,
-      reference: raw.reference.trim() || null,
-      costCenter: raw.costCenter.trim() || null,
-      narration: raw.narration.trim() || null,
+      reference: raw.reference.trim() || "",
+      costCenter: raw.costCenter.trim() || "",
+      narration: raw.narration.trim() || "",
       details,
     };
     if (id == null) {
