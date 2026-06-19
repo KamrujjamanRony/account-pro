@@ -23,8 +23,8 @@ export const MENU_ROUTES: MenuRoute[] = [
   { menu: 'General Ledger', path: '/general-ledger' },
   { menu: 'Trial Balance', path: '/trial-balance' },
   { menu: 'Balance Sheet', path: '/balance-sheet' },
-  { menu: 'Users', path: '/user-list' },
-  { menu: 'Menus', path: '/menu-list' },
+  { menu: 'User', path: '/user-list' },
+  { menu: 'Menu', path: '/menu-list' },
 ];
 
 /**

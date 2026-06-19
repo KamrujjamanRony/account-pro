@@ -33,10 +33,14 @@ body {
 
 /* Per-route entrance: the routed component is inserted right after its
    <router-outlet> and recreated on each navigation, so this animation replays
-   on every page change. */
+   on every page change.
+
+   NOTE: no `both` fill — the animation must NOT leave a lingering `transform`
+   on the routed component, otherwise that element becomes the containing block
+   for any `position: fixed` modal inside it (mispositioning the modal). */
 router-outlet + * {
   display: block;
-  animation: route-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: route-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes route-enter {
