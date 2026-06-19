@@ -1,6 +1,5 @@
 import { Service, computed, inject } from '@angular/core';
 import { AuthService } from './auth-service';
-import { MenuPermissionNode } from '../models/user.model';
 import { PermissionAction } from '../models/menu.model';
 
 /** A menu and the route it maps to, in sidebar order (used for fallbacks). */
@@ -41,11 +40,12 @@ export const MENU_ROUTES: MenuRoute[] = [
 export class PermissionService {
   private auth = inject(AuthService);
 
-  /** menuName → set of granted action names, flattened from the user's tree. */
+  /** menuName → set of granted action names, from the user's `userMenu`. */
   private readonly index = computed(() => {
     const map = new Map<string, Set<string>>();
-    const user = this.auth.currentUser();
-    if (user) this.indexNodes(user.menuPermissions ?? [], map);
+    for (const entry of this.auth.currentUser()?.userMenu ?? []) {
+      map.set(entry.menuName, new Set(entry.permissions ?? []));
+    }
     return map;
   });
 
@@ -78,18 +78,5 @@ export class PermissionService {
   /** First route the user may view, for redirecting away from denied pages. */
   firstAllowedPath(): string {
     return this.viewableMenus()[0]?.path ?? '/login';
-  }
-
-  private indexNodes(nodes: MenuPermissionNode[], map: Map<string, Set<string>>): void {
-    for (const node of nodes) {
-      if (node.isSelected) {
-        const granted = new Set<string>();
-        for (const key of node.permissionsKey ?? []) {
-          if (key.isSelected) granted.add(key.permission);
-        }
-        map.set(node.menuName, granted);
-      }
-      this.indexNodes(node.children ?? [], map);
-    }
   }
 }
