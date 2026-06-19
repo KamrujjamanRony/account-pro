@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
 import { environment } from '../../../environments/environment';
 import { Menu, PERMISSION_ACTIONS, PermissionAction } from '../../models/menu.model';
+import { CanDirective } from '../../directives/can.directive';
 
 interface DefaultMenu {
   menuName: string;
@@ -15,7 +16,7 @@ interface DefaultMenu {
 
 @Component({
   selector: 'app-menus',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CanDirective],
   templateUrl: './menus.html',
   styleUrl: './menus.css',
 })

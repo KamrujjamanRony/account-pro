@@ -8,6 +8,7 @@ import {
   ChartTreeNode,
 } from '../../models/chart-of-account.model';
 import { FlatNode } from '../../utils/tree';
+import { CanDirective } from '../../directives/can.directive';
 
 interface FlatTreeRow extends FlatNode<ChartTreeNode> {
   hasChildren: boolean;
@@ -16,7 +17,7 @@ interface FlatTreeRow extends FlatNode<ChartTreeNode> {
 
 @Component({
   selector: 'app-chart-of-account',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CanDirective],
   templateUrl: './chart-of-account.html',
   styleUrl: './chart-of-account.css',
 })

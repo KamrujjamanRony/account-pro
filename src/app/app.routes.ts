@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { environment } from '../environments/environment';
 import { authGuard } from './guards/auth-guard';
+import { permissionGuard } from './guards/permission-guard';
 
 const companyName = environment.companyName;
 
@@ -15,37 +16,43 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () => import('./pages/dashboard/dashboard').then(m => m.Dashboard),
-        data: { breadcrumb: 'Dashboard' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Dashboard', menu: 'Dashboard' },
         title: `Dashboard | ${companyName}`,
       },
       {
         path: 'chart-of-account',
         loadComponent: () => import('./pages/chart-of-account/chart-of-account').then(m => m.ChartOfAccount),
-        data: { breadcrumb: 'Chart of Account' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Chart of Account', menu: 'Chart of Account' },
         title: `Chart of Account | ${companyName}`,
       },
       {
         path: 'ledger',
         loadComponent: () => import('./pages/ledger/ledger').then(m => m.Ledger),
-        data: { breadcrumb: 'Ledger' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Ledger', menu: 'Ledger' },
         title: `Ledger | ${companyName}`,
       },
       {
         path: 'voucher',
         loadComponent: () => import('./pages/voucher/voucher').then(m => m.Voucher),
-        data: { breadcrumb: 'Voucher' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Voucher', menu: 'Voucher' },
         title: `Voucher | ${companyName}`,
       },
       {
         path: 'cash-book',
         loadComponent: () => import('./pages/cash-bank-book/cash-bank-book').then(m => m.CashBankBook),
-        data: { breadcrumb: 'Cash Book', kind: 'cash' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Cash Book', kind: 'cash', menu: 'Cash Book' },
         title: `Cash Book | ${companyName}`,
       },
       {
         path: 'bank-book',
         loadComponent: () => import('./pages/cash-bank-book/cash-bank-book').then(m => m.CashBankBook),
-        data: { breadcrumb: 'Bank Book', kind: 'bank' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Bank Book', kind: 'bank', menu: 'Bank Book' },
         title: `Bank Book | ${companyName}`,
       },
       {
@@ -54,37 +61,43 @@ export const routes: Routes = [
           import('./pages/receipt-payment-statement/receipt-payment-statement').then(
             m => m.ReceiptPaymentStatementPage,
           ),
-        data: { breadcrumb: 'Receipt & Payment Statement' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Receipt & Payment Statement', menu: 'Receipt & Payment' },
         title: `Receipt & Payment Statement | ${companyName}`,
       },
       {
         path: 'general-ledger',
         loadComponent: () => import('./pages/general-ledger/general-ledger').then(m => m.GeneralLedger),
-        data: { breadcrumb: 'General Ledger' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'General Ledger', menu: 'General Ledger' },
         title: `General Ledger | ${companyName}`,
       },
       {
         path: 'trial-balance',
         loadComponent: () => import('./pages/trial-balance/trial-balance').then(m => m.TrialBalance),
-        data: { breadcrumb: 'Trial Balance' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Trial Balance', menu: 'Trial Balance' },
         title: `Trial Balance | ${companyName}`,
       },
       {
         path: 'balance-sheet',
         loadComponent: () => import('./pages/balance-sheet/balance-sheet').then(m => m.BalanceSheet),
-        data: { breadcrumb: 'Balance Sheet' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Balance Sheet', menu: 'Balance Sheet' },
         title: `Balance Sheet | ${companyName}`,
       },
       {
         path: 'user-list',
         loadComponent: () => import('./pages/users/users').then(m => m.Users),
-        data: { breadcrumb: 'User List' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'User List', menu: 'Users' },
         title: `User List | ${companyName}`,
       },
       {
         path: 'menu-list',
         loadComponent: () => import('./pages/menus/menus').then(m => m.Menus),
-        data: { breadcrumb: 'Menu List' },
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Menu List', menu: 'Menus' },
         title: `Menu List | ${companyName}`,
       }
     ]

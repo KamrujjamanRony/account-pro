@@ -1,10 +1,11 @@
 import { inject, Service, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { LoginRequest, MenuPermissionNode, User } from '../models/user.model';
+import { MenuService } from './menu-service';
 
 @Service()
 export class AuthService {
@@ -12,19 +13,42 @@ export class AuthService {
   private tokenCookie = 'auth_token';
   private router = inject(Router);
   private http = inject(HttpClient);
+  private menu = inject(MenuService);
   private loginUrl = `${environment.apiUrl}/Authentication/Login`;
 
   /** Authenticate against the API and sign the user in on success. */
   login(credentials: LoginRequest): Observable<User> {
     return this.http
       .post<User>(this.loginUrl, credentials, { observe: 'response' })
-      .pipe(map(res => {
+      .pipe(switchMap(res => {
         const user = (res.body ?? {}) as User;
         // Some APIs return the JWT in the Authorization header instead of the body.
         const headerToken = res.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
+        // Sign in first so the auth cookie is set for the permission lookup.
         this.setUser({ ...user, password: undefined }, headerToken ?? undefined);
-        return user;
+        return this.loadPermissions(user, headerToken ?? undefined);
       }));
+  }
+
+  /**
+   * Fetch the user's saved menu-permission tree and merge it into the signed-in
+   * user. The login response doesn't reliably include the tree, so we pull it
+   * from `GenerateTreeData` (the same source the user editor uses). Falls back
+   * to whatever the login returned if the lookup fails or there's no user id.
+   */
+  private loadPermissions(user: User, token?: string): Observable<User> {
+    if (user.id == null) return of(user);
+    return this.menu.generateTree(user.id).pipe(
+      map(tree => {
+        const full: User = {
+          ...user,
+          menuPermissions: (tree ?? []) as unknown as MenuPermissionNode[],
+        };
+        this.setUser({ ...full, password: undefined }, token);
+        return full;
+      }),
+      catchError(() => of(user)),
+    );
   }
 
   /** JWT for the signed-in user, read from the cookie. */

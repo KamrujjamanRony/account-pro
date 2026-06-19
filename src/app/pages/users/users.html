@@ -7,6 +7,7 @@
     </div>
     <div class="flex gap-2">
       <button
+        *appCan="'Users:create'"
         type="button"
         (click)="openCreate()"
         class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
@@ -64,8 +65,8 @@
               </td>
               <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ user.postBy || '—' }}</td>
               <td class="px-4 py-3 text-right">
-                <button type="button" (click)="openEdit(user)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
-                <button type="button" (click)="remove(user)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+                <button *appCan="'Users:edit'" type="button" (click)="openEdit(user)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                <button *appCan="'Users:delete'" type="button" (click)="remove(user)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
               </td>
             </tr>
           }

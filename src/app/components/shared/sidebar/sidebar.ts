@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../services/auth-service';
+import { PermissionService } from '../../../services/permission-service';
 import { environment } from '../../../../environments/environment';
 
 interface NavItem {
@@ -18,9 +19,15 @@ interface NavItem {
 })
 export class Sidebar {
   private auth = inject(AuthService);
+  private permissions = inject(PermissionService);
 
   protected readonly companyName = environment.companyName;
   protected readonly user = this.auth.currentUser;
+
+  /** Nav items the signed-in user is allowed to view (label == menu name). */
+  protected readonly visibleNavItems = computed(() =>
+    this.navItems.filter(item => this.permissions.canView(item.label)),
+  );
 
   protected readonly navItems: NavItem[] = [
     {

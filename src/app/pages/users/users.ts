@@ -15,10 +15,11 @@ import {
   toggleNodeSelection,
   togglePermission,
 } from '../../utils/tree';
+import { CanDirective } from '../../directives/can.directive';
 
 @Component({
   selector: 'app-users',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CanDirective],
   templateUrl: './users.html',
   styleUrl: './users.css',
 })

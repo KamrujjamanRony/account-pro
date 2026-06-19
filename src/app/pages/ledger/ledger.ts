@@ -7,10 +7,11 @@ import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
 import { Ledger as LedgerModel } from '../../models/ledger.model';
 import { ChartOfAccount } from '../../models/chart-of-account.model';
+import { CanDirective } from '../../directives/can.directive';
 
 @Component({
   selector: 'app-ledger',
-  imports: [ReactiveFormsModule, DecimalPipe],
+  imports: [ReactiveFormsModule, DecimalPipe, CanDirective],
   templateUrl: './ledger.html',
   styleUrl: './ledger.css',
   host: {

@@ -13,10 +13,11 @@ import {
 } from '../../models/voucher.model';
 import { Ledger } from '../../models/ledger.model';
 import { VoucherService } from '../../services/voucher-service';
+import { CanDirective } from '../../directives/can.directive';
 
 @Component({
   selector: 'app-voucher',
-  imports: [ReactiveFormsModule, DecimalPipe, DatePipe],
+  imports: [ReactiveFormsModule, DecimalPipe, DatePipe, CanDirective],
   templateUrl: './voucher.html',
   styleUrl: './voucher.css',
   host: {
