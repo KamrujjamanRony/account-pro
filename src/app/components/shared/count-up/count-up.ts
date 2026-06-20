@@ -15,7 +15,7 @@ export class CountUp implements OnDestroy {
   /** Target value to animate towards. */
   readonly value = input(0);
   /** Animation length in milliseconds. */
-  readonly duration = input(1000);
+  readonly duration = input(200);
   /** DecimalPipe digits format, e.g. "1.0-0". */
   readonly format = input('1.0-0');
 
