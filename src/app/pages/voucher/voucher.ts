@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, DOCUMENT } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { AuthService } from '../../services/auth-service';
@@ -32,6 +32,7 @@ export class Voucher {
   private auth = inject(AuthService);
   private alert = inject(AlertService);
   private cdr = inject(ChangeDetectorRef);
+  private document = inject(DOCUMENT);
 
   protected readonly types = VOUCHER_TYPES;
 
@@ -67,6 +68,8 @@ export class Voucher {
   // ---- per-row ledger combobox ----
   protected readonly openLine = signal<number | null>(null);
   protected readonly lineSearch = signal('');
+  /** Index of the keyboard-highlighted option within filteredLedgers(). */
+  protected readonly activeLedgerIndex = signal(0);
 
   // ---- type-driven behaviour ----
   /** Cash & bank ledgers (Contra picks from these). */
@@ -404,12 +407,75 @@ export class Voucher {
   // ---- per-row ledger combobox ----
   toggleLineDropdown(index: number, event: Event) {
     event.stopPropagation();
+    if (this.openLine() === index) {
+      this.openLine.set(null);
+      return;
+    }
+    this.openLineDropdown(index);
+  }
+
+  /** Open a row's picker, highlight its selection and focus the search box. */
+  private openLineDropdown(index: number) {
     this.lineSearch.set('');
-    this.openLine.update(open => (open === index ? null : index));
+    this.openLine.set(index);
+    const selectedId = this.lines.at(index)?.get('ledgerId')?.value;
+    const idx = this.filteredLedgers().findIndex(l => l.id === selectedId);
+    this.activeLedgerIndex.set(idx >= 0 ? idx : 0);
+    this.focusAfterRender('v-ledger-search-' + index);
   }
 
   closeLineDropdown() {
     this.openLine.set(null);
+  }
+
+  /** Keyboard handling on the closed row trigger: open on Enter / Space / ArrowDown. */
+  onLineTriggerKeydown(index: number, event: KeyboardEvent) {
+    if (this.openLine() === index) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openLineDropdown(index);
+    }
+  }
+
+  onLineSearchInput(value: string) {
+    this.lineSearch.set(value);
+    this.activeLedgerIndex.set(0);
+  }
+
+  /** Keyboard handling inside the open picker (focus stays on the search box). */
+  onLineSearchKeydown(index: number, event: KeyboardEvent) {
+    const list = this.filteredLedgers();
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeLedgerIndex.update(i => Math.min(i + 1, list.length - 1));
+        this.scrollActiveLedgerIntoView();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeLedgerIndex.update(i => Math.max(i - 1, 0));
+        this.scrollActiveLedgerIntoView();
+        break;
+      case 'Enter': {
+        event.preventDefault();
+        const ledger = list[this.activeLedgerIndex()];
+        if (ledger) this.selectLineLedger(index, ledger);
+        break;
+      }
+      case 'Escape':
+        event.preventDefault();
+        this.closeLineDropdown();
+        this.focusAfterRender('v-ledger-trigger-' + index);
+        break;
+      case 'Tab':
+        this.closeLineDropdown();
+        break;
+    }
+  }
+
+  private scrollActiveLedgerIntoView() {
+    const el = this.document.getElementById(`v-ledger-opt-${this.activeLedgerIndex()}`);
+    el?.scrollIntoView({ block: 'nearest' });
   }
 
   selectLineLedger(index: number, ledger: LedgerOption) {
@@ -417,6 +483,60 @@ export class Voucher {
     line.get('ledgerId')?.setValue(ledger.id);
     line.get('ledgerId')?.markAsTouched();
     this.openLine.set(null);
+    // Selecting advances to the first editable cell of the row.
+    this.focusAfterRender(this.firstEditableCellId(index));
+  }
+
+  // ---- keyboard form navigation ----
+  /** Enter on a field moves focus to the next field instead of submitting. */
+  onFieldEnter(event: Event, nextId: string) {
+    event.preventDefault();
+    this.focusById(nextId);
+  }
+
+  onDebitEnter(event: Event, index: number) {
+    event.preventDefault();
+    this.focusById(
+      this.isAmountReadonly(index, 'credit') ? 'v-remarks-' + index : 'v-credit-' + index,
+    );
+  }
+
+  onCreditEnter(event: Event, index: number) {
+    event.preventDefault();
+    this.focusById('v-remarks-' + index);
+  }
+
+  /** Enter on remarks moves to the next row, or out to the cost-center field. */
+  onRemarksEnter(event: Event, index: number) {
+    event.preventDefault();
+    if (index < this.lines.length - 1) {
+      this.focusById('v-ledger-trigger-' + (index + 1));
+    } else {
+      this.focusById('form-cost');
+    }
+  }
+
+  /** Enter on the last field submits the voucher and lands focus on Save. */
+  submitFromKeyboard(event: Event) {
+    event.preventDefault();
+    this.focusById('voucher-save');
+    this.save();
+  }
+
+  /** The first cell a row's keyboard flow should land on after picking a ledger. */
+  private firstEditableCellId(index: number): string {
+    if (!this.isAmountReadonly(index, 'debit')) return 'v-debit-' + index;
+    if (!this.isAmountReadonly(index, 'credit')) return 'v-credit-' + index;
+    return 'v-remarks-' + index;
+  }
+
+  private focusById(id: string) {
+    (this.document.getElementById(id) as HTMLElement | null)?.focus();
+  }
+
+  /** Focus an element after the next render flush so freshly shown nodes exist. */
+  private focusAfterRender(id: string) {
+    requestAnimationFrame(() => this.focusById(id));
   }
 
   // ---- form lifecycle ----
@@ -433,6 +553,7 @@ export class Voucher {
     this.openLine.set(null);
     this.showForm.set(true);
     this.applyType(type, true);
+    this.focusAfterRender('form-type');
   }
 
   openEdit(voucher: VoucherModel) {
@@ -484,6 +605,7 @@ export class Voucher {
     // Apply option lists / lock state for the loaded type without resetting
     // rows (applyType calls refreshLines, which recomputes locks and totals).
     this.applyType(type, false);
+    this.focusAfterRender('form-type');
   }
 
   closeForm() {

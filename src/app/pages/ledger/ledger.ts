@@ -256,6 +256,7 @@ export class Ledger {
     this.selectedGroup.set(null);
     this.groupOpen.set(false);
     this.showForm.set(true);
+    this.focusAfterRender('ledger-group-trigger');
   }
 
   openEdit(ledger: LedgerModel) {
@@ -275,6 +276,7 @@ export class Ledger {
     this.selectedGroup.set(this.groups().find(g => g.id === ledger.groupId) ?? null);
     this.groupOpen.set(false);
     this.showForm.set(true);
+    this.focusAfterRender('ledger-group-trigger');
   }
 
   closeForm() {

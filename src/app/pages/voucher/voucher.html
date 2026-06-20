@@ -136,6 +136,7 @@
             <div>
               <label for="form-type" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Type</label>
               <select id="form-type" formControlName="type"
+                (keydown.enter)="onFieldEnter($event, 'form-date')"
                 class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
                 @for (t of types; track t.code) {
                   <option [value]="t.code">{{ t.label }}</option>
@@ -145,6 +146,7 @@
             <div>
               <label for="form-date" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Date</label>
               <input id="form-date" type="date" formControlName="voucherDate"
+                (keydown.enter)="onFieldEnter($event, 'form-reference')"
                 class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
               @if (form.controls.voucherDate.touched && form.controls.voucherDate.invalid) {
                 <p class="mt-1 text-xs text-red-600">Date is required.</p>
@@ -153,6 +155,7 @@
             <div>
               <label for="form-reference" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Reference</label>
               <input id="form-reference" type="text" formControlName="reference"
+                (keydown.enter)="onFieldEnter($event, 'v-ledger-trigger-0')"
                 class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
             </div>
           </div>
@@ -189,6 +192,8 @@
                       <td class="px-3 py-2">
                         <div class="relative" (click)="$event.stopPropagation()">
                           <button type="button" (click)="toggleLineDropdown(i, $event)"
+                            [attr.id]="'v-ledger-trigger-' + i"
+                            (keydown)="onLineTriggerKeydown(i, $event)"
                             role="combobox" aria-haspopup="listbox" [attr.aria-expanded]="openLine() === i"
                             [attr.aria-label]="'Select ledger for line ' + (i + 1)"
                             class="flex w-full min-w-44 items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
@@ -203,16 +208,24 @@
                             <div class="absolute z-20 mt-1 w-64 rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
                               <div class="p-2">
                                 <input type="search" placeholder="Search ledgers…"
-                                  [value]="lineSearch()" (input)="lineSearch.set($any($event.target).value)"
+                                  [attr.id]="'v-ledger-search-' + i"
+                                  role="combobox" aria-expanded="true"
+                                  [attr.aria-activedescendant]="'v-ledger-opt-' + activeLedgerIndex()"
+                                  [value]="lineSearch()" (input)="onLineSearchInput($any($event.target).value)"
+                                  (keydown)="onLineSearchKeydown(i, $event)"
                                   aria-label="Search ledgers"
                                   class="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-600 dark:bg-neutral-900" />
                               </div>
                               <ul role="listbox" class="max-h-56 overflow-y-auto pb-1">
-                                @for (l of filteredLedgers(); track l.id) {
-                                  <li role="option" [attr.aria-selected]="line.get('ledgerId')?.value === l.id">
+                                @for (l of filteredLedgers(); track l.id; let j = $index) {
+                                  <li role="option" [attr.id]="'v-ledger-opt-' + j" [attr.aria-selected]="line.get('ledgerId')?.value === l.id">
                                     <button type="button" (click)="selectLineLedger(i, l)"
-                                      class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-700"
-                                      [class]="line.get('ledgerId')?.value === l.id ? 'bg-primary-50 dark:bg-primary-950' : ''">
+                                      (mousemove)="activeLedgerIndex.set(j)"
+                                      class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-700 dark:text-neutral-200"
+                                      [class.bg-neutral-100]="activeLedgerIndex() === j"
+                                      [class.dark:bg-neutral-700]="activeLedgerIndex() === j"
+                                      [class.bg-primary-50]="line.get('ledgerId')?.value === l.id"
+                                      [class.dark:bg-primary-950]="line.get('ledgerId')?.value === l.id">
                                       <span>{{ l.ledgerName }}</span>
                                       @if (line.get('ledgerId')?.value === l.id) {
                                         <svg class="h-4 w-4 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -234,6 +247,8 @@
                       </td>
                       <td class="px-3 py-2">
                         <input type="number" min="0" step="0.01" formControlName="debit" inputmode="decimal"
+                          [attr.id]="'v-debit-' + i"
+                          (keydown.enter)="onDebitEnter($event, i)"
                           [readonly]="isAmountReadonly(i, 'debit')"
                           [attr.aria-disabled]="isAmountReadonly(i, 'debit')"
                           [attr.tabindex]="isAmountReadonly(i, 'debit') ? -1 : null"
@@ -242,6 +257,8 @@
                       </td>
                       <td class="px-3 py-2">
                         <input type="number" min="0" step="0.01" formControlName="credit" inputmode="decimal"
+                          [attr.id]="'v-credit-' + i"
+                          (keydown.enter)="onCreditEnter($event, i)"
                           [readonly]="isAmountReadonly(i, 'credit')"
                           [attr.aria-disabled]="isAmountReadonly(i, 'credit')"
                           [attr.tabindex]="isAmountReadonly(i, 'credit') ? -1 : null"
@@ -250,6 +267,8 @@
                       </td>
                       <td class="px-3 py-2">
                         <input type="text" formControlName="remarks"
+                          [attr.id]="'v-remarks-' + i"
+                          (keydown.enter)="onRemarksEnter($event, i)"
                           [attr.aria-label]="'Remarks for line ' + (i + 1)"
                           class="w-full min-w-36 rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
                       </td>
