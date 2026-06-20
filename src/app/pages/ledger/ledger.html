@@ -112,8 +112,10 @@
           <label id="ledger-group-label" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Group</label>
           <div class="relative" (click)="$event.stopPropagation()">
             <button
+              id="ledger-group-trigger"
               type="button"
               (click)="toggleGroupDropdown($event)"
+              (keydown)="onGroupTriggerKeydown($event)"
               role="combobox"
               aria-haspopup="listbox"
               aria-controls="ledger-group-listbox"
@@ -135,19 +137,28 @@
                     id="ledger-group-search"
                     type="search"
                     placeholder="Search groups…"
+                    role="combobox"
+                    aria-controls="ledger-group-listbox"
+                    aria-expanded="true"
+                    [attr.aria-activedescendant]="'ledger-group-opt-' + activeGroupIndex()"
                     [value]="groupSearch()"
-                    (input)="groupSearch.set($any($event.target).value)"
+                    (input)="onGroupSearchInput($any($event.target).value)"
+                    (keydown)="onGroupSearchKeydown($event)"
                     class="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-600 dark:bg-neutral-900"
                   />
                 </div>
                 <ul id="ledger-group-listbox" role="listbox" aria-labelledby="ledger-group-label" class="max-h-56 overflow-y-auto pb-1">
-                  @for (group of filteredGroups(); track group.id) {
-                    <li role="option" [attr.aria-selected]="selectedGroup()?.id === group.id">
+                  @for (group of filteredGroups(); track group.id; let i = $index) {
+                    <li role="option" [attr.id]="'ledger-group-opt-' + i" [attr.aria-selected]="selectedGroup()?.id === group.id">
                       <button
                         type="button"
                         (click)="selectGroup(group)"
-                        class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-700"
-                        [class]="selectedGroup()?.id === group.id ? 'bg-primary-50 dark:bg-primary-950' : ''"
+                        (mousemove)="activeGroupIndex.set(i)"
+                        class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-700 dark:text-neutral-200"
+                        [class.bg-neutral-100]="activeGroupIndex() === i"
+                        [class.dark:bg-neutral-700]="activeGroupIndex() === i"
+                        [class.bg-primary-50]="selectedGroup()?.id === group.id"
+                        [class.dark:bg-primary-950]="selectedGroup()?.id === group.id"
                       >
                         <span>{{ group.name }}</span>
                         @if (selectedGroup()?.id === group.id) {
@@ -172,6 +183,7 @@
         <div>
           <label for="ledger-name" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Ledger name</label>
           <input id="ledger-name" type="text" formControlName="ledgerName"
+            (keydown.enter)="onFieldEnter($event, 'ledger-dr')"
             class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
           @if (form.controls.ledgerName.touched && form.controls.ledgerName.invalid) {
             <p class="mt-1 text-xs text-red-600">Ledger name is required.</p>
@@ -182,11 +194,13 @@
           <div>
             <label for="ledger-dr" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Opening balance (Dr)</label>
             <input id="ledger-dr" type="number" min="0" step="0.01" formControlName="drOpeningBalance"
+              (keydown.enter)="onFieldEnter($event, 'ledger-cr')"
               class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
           </div>
           <div>
             <label for="ledger-cr" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Opening balance (Cr)</label>
             <input id="ledger-cr" type="number" min="0" step="0.01" formControlName="crOpeningBalance"
+              (keydown.enter)="onFieldEnter($event, 'ledger-phone')"
               class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
           </div>
         </div>
@@ -195,11 +209,13 @@
           <div>
             <label for="ledger-phone" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Phone</label>
             <input id="ledger-phone" type="tel" formControlName="phone"
+              (keydown.enter)="onFieldEnter($event, 'ledger-email')"
               class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
           </div>
           <div>
             <label for="ledger-email" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Email</label>
             <input id="ledger-email" type="email" formControlName="email"
+              (keydown.enter)="onFieldEnter($event, 'ledger-address')"
               class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
             @if (form.controls.email.touched && form.controls.email.invalid) {
               <p class="mt-1 text-xs text-red-600">Enter a valid email address.</p>
@@ -210,6 +226,7 @@
         <div>
           <label for="ledger-address" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Address</label>
           <input id="ledger-address" type="text" formControlName="address"
+            (keydown.enter)="submitFromKeyboard($event)"
             class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
         </div>
 
@@ -228,7 +245,7 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" (click)="closeForm()"
             class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
-          <button type="submit" [disabled]="saving()"
+          <button id="ledger-save" type="submit" [disabled]="saving()"
             class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
             {{ saving() ? 'Saving…' : 'Save' }}
           </button>

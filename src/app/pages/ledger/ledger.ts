@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, DOCUMENT } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { ChartOfAccountService } from '../../services/chart-of-account-service';
@@ -25,6 +25,7 @@ export class Ledger {
   private accountService = inject(ChartOfAccountService);
   private auth = inject(AuthService);
   private alert = inject(AlertService);
+  private document = inject(DOCUMENT);
 
   protected readonly ledgers = signal<LedgerModel[]>([]);
   protected readonly groups = signal<ChartOfAccount[]>([]);
@@ -44,6 +45,8 @@ export class Ledger {
   protected readonly groupOpen = signal(false);
   protected readonly groupSearch = signal('');
   protected readonly selectedGroup = signal<ChartOfAccount | null>(null);
+  /** Index of the keyboard-highlighted option within filteredGroups(). */
+  protected readonly activeGroupIndex = signal(0);
 
   protected readonly filteredGroups = computed(() => {
     const term = this.groupSearch().trim().toLowerCase();
@@ -135,11 +138,72 @@ export class Ledger {
     // Keep the click from reaching the document handler that closes the menu.
     event.stopPropagation();
     this.groupOpen.update(open => !open);
-    if (this.groupOpen()) this.groupSearch.set('');
+    if (this.groupOpen()) this.openGroupDropdown();
+  }
+
+  /** Open the menu, reset the search, highlight the selected option and focus the search box. */
+  private openGroupDropdown() {
+    this.groupOpen.set(true);
+    this.groupSearch.set('');
+    const selectedId = this.selectedGroup()?.id;
+    const idx = this.filteredGroups().findIndex(g => g.id === selectedId);
+    this.activeGroupIndex.set(idx >= 0 ? idx : 0);
+    this.focusAfterRender('ledger-group-search');
   }
 
   closeGroupDropdown() {
     this.groupOpen.set(false);
+  }
+
+  /** Keyboard handling on the closed combobox trigger: open on Enter / Space / ArrowDown. */
+  onGroupTriggerKeydown(event: KeyboardEvent) {
+    if (this.groupOpen()) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openGroupDropdown();
+    }
+  }
+
+  onGroupSearchInput(value: string) {
+    this.groupSearch.set(value);
+    // Filtering changed the list; keep the highlight on a valid row.
+    this.activeGroupIndex.set(0);
+  }
+
+  /** Keyboard handling inside the open menu (focus stays on the search box). */
+  onGroupSearchKeydown(event: KeyboardEvent) {
+    const groups = this.filteredGroups();
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeGroupIndex.update(i => Math.min(i + 1, groups.length - 1));
+        this.scrollActiveGroupIntoView();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeGroupIndex.update(i => Math.max(i - 1, 0));
+        this.scrollActiveGroupIntoView();
+        break;
+      case 'Enter': {
+        event.preventDefault();
+        const group = groups[this.activeGroupIndex()];
+        if (group) this.selectGroup(group);
+        break;
+      }
+      case 'Escape':
+        event.preventDefault();
+        this.closeGroupDropdown();
+        this.focusAfterRender('ledger-group-trigger');
+        break;
+      case 'Tab':
+        this.closeGroupDropdown();
+        break;
+    }
+  }
+
+  private scrollActiveGroupIntoView() {
+    const el = this.document.getElementById(`ledger-group-opt-${this.activeGroupIndex()}`);
+    el?.scrollIntoView({ block: 'nearest' });
   }
 
   selectGroup(group: ChartOfAccount) {
@@ -147,6 +211,31 @@ export class Ledger {
     this.form.controls.groupId.setValue(group.id ?? null);
     this.form.controls.groupId.markAsTouched();
     this.groupOpen.set(false);
+    // Selecting advances to the next field, per the keyboard flow.
+    this.focusAfterRender('ledger-name');
+  }
+
+  // ---- keyboard form navigation ----
+  /** Enter on a text field moves focus to the next field instead of submitting. */
+  onFieldEnter(event: Event, nextId: string) {
+    event.preventDefault();
+    this.focusById(nextId);
+  }
+
+  /** Enter on the last field submits the form and lands focus on the Save button. */
+  submitFromKeyboard(event: Event) {
+    event.preventDefault();
+    this.focusById('ledger-save');
+    this.save();
+  }
+
+  private focusById(id: string) {
+    (this.document.getElementById(id) as HTMLElement | null)?.focus();
+  }
+
+  /** Focus an element after the next render flush so freshly shown nodes exist. */
+  private focusAfterRender(id: string) {
+    requestAnimationFrame(() => this.focusById(id));
   }
 
   // ---- form lifecycle ----
