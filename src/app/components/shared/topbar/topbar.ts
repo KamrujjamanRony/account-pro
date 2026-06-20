@@ -1,6 +1,7 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Breadcrumb } from '../../../utils/breadcrumb/breadcrumb';
 import { AuthService } from '../../../services/auth-service';
+import { ThemeService } from '../../../services/theme-service';
 
 /** A day cell in the calendar grid. */
 interface DayCell {
@@ -26,6 +27,10 @@ interface DayCell {
 })
 export class Topbar implements OnDestroy {
   private auth = inject(AuthService);
+  private theme = inject(ThemeService);
+
+  /** True when the dark theme is active — drives the toggle button UI. */
+  protected readonly isDark = this.theme.isDark;
 
   protected readonly user = this.auth.currentUser;
   protected readonly userName = computed(() => {
@@ -87,6 +92,11 @@ export class Topbar implements OnDestroy {
       };
     });
   });
+
+  /** Switch between light and dark themes. */
+  toggleTheme() {
+    this.theme.toggle();
+  }
 
   toggleCalendar(event: Event) {
     event.stopPropagation();

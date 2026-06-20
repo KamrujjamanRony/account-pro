@@ -59,7 +59,7 @@
 
 /* Form panel */
 .form-panel { background: #f1f5f9; }
-@media (prefers-color-scheme: dark) { .form-panel { background: #0f172a; } }
+:host-context(.dark) .form-panel { background: #0f172a; }
 
 .form-card { animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
@@ -111,9 +111,7 @@
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18);
 }
 .input-wrap:focus-within .input-icon { color: #6366f1; }
-@media (prefers-color-scheme: dark) {
-  .form-input { border-color: #334155; background: #1e293b; color: #fff; }
-}
+:host-context(.dark) .form-input { border-color: #334155; background: #1e293b; color: #fff; }
 
 .reveal-btn {
   position: absolute;

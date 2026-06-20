@@ -2,6 +2,24 @@
 
 @import 'tailwindcss';
 
+/* Drive the `dark:` variant from a `.dark` class on <html> (toggled by the
+   ThemeService) instead of the OS `prefers-color-scheme` media query. This is
+   what makes the in-app light/dark toggle work. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Smooth the transition between themes for surfaces and text. Interactive
+   transitions on individual elements still win where declared. */
+:root {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 /* Project theme tokens (Tailwind v4). Adds the `primary` palette and a
    dark surface colour used across the app shell. */
 @theme {

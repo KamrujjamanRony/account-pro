@@ -15,7 +15,7 @@ export class AuthService {
   private router = inject(Router);
   private http = inject(HttpClient);
   private loginUrl = `${environment.apiUrl}/Authentication/Login`;
-  private refreshUrl = `${environment.apiUrl}/Authentication/RefreshToken`;
+  private refreshUrl = `${environment.apiUrl}/Authentication/refresh-token`;
 
   /** Reactive copy of the signed-in user (null when logged out). */
   readonly currentUser = signal<User | null>(null);
@@ -60,8 +60,8 @@ export class AuthService {
    * so multiple concurrent 401s only trigger one network call. Signs the user
    * out if there's no refresh token or the exchange fails.
    *
-   * NOTE: endpoint + payload shape (`Authentication/RefreshToken` with
-   * `{ token, refreshToken }`) are assumptions — adjust to match the API.
+   * Hits `Authentication/refresh-token` with `{ token, refreshToken }` and
+   * receives the same `ApiResponse<AuthResult>` envelope as login.
    */
   refreshToken(): Observable<string> {
     if (this.refresh$) return this.refresh$;

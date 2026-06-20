@@ -15,6 +15,31 @@
     <span class="font-mono text-sm tabular-nums text-neutral-700 dark:text-neutral-200" aria-label="Current time">{{ time() }}</span>
   </div>
 
+  <!-- Theme toggle -->
+  <button
+    type="button"
+    (click)="toggleTheme()"
+    role="switch"
+    [attr.aria-checked]="isDark()"
+    [attr.aria-label]="isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
+    [attr.title]="isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
+    class="theme-toggle"
+    [class.is-dark]="isDark()"
+  >
+    <span class="theme-toggle-track" aria-hidden="true">
+      <!-- Sun -->
+      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+      </svg>
+      <!-- Moon -->
+      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+      </svg>
+      <span class="theme-toggle-thumb"></span>
+    </span>
+  </button>
+
   <!-- Calendar -->
   <div class="relative" (click)="$event.stopPropagation()">
     <button

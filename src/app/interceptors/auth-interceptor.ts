@@ -21,7 +21,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   // Only decorate calls to our own API; never the auth endpoints themselves.
   const isApiCall = req.url.startsWith(environment.apiUrl);
   const isLogin = req.url.includes('/Authentication/Login');
-  const isRefresh = req.url.includes('/Authentication/RefreshToken');
+  const isRefresh = req.url.includes('/Authentication/refresh-token');
   const decorate = isApiCall && !isLogin && !isRefresh;
 
   const token = auth.getToken();
