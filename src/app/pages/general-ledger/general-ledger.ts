@@ -1,25 +1,38 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
+import { ChartOfAccountService } from '../../services/chart-of-account-service';
+import { LedgerService } from '../../services/ledger-service';
+import { CostCenterService } from '../../services/cost-center-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { GeneralLedgerReport } from '../../models/report.model';
+import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
 
 @Component({
   selector: 'app-general-ledger',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, SearchSelect],
   templateUrl: './general-ledger.html',
   styleUrl: './general-ledger.css',
 })
 export class GeneralLedger {
   private service = inject(ReportService);
+  private accountService = inject(ChartOfAccountService);
+  private ledgerService = inject(LedgerService);
+  private costCenterService = inject(CostCenterService);
   private excel = inject(ExcelExportService);
 
   protected readonly fromDate = signal(this.startOfMonth());
   protected readonly toDate = signal(this.today());
-  /** Optional filters; blank means "all". */
-  protected readonly groupName = signal('');
-  protected readonly ledger = signal('');
-  protected readonly costCenter = signal('');
+
+  /** Filter selections; empty means "all". Groups & ledgers are multi-select. */
+  protected readonly selectedGroups = signal<string[]>([]);
+  protected readonly selectedLedgers = signal<string[]>([]);
+  protected readonly selectedCostCenter = signal<string[]>([]);
+
+  /** Dropdown option lists. */
+  protected readonly groupOptions = signal<SelectOption[]>([]);
+  protected readonly ledgerOptions = signal<SelectOption[]>([]);
+  protected readonly costCenterOptions = signal<SelectOption[]>([]);
 
   protected readonly report = signal<GeneralLedgerReport | null>(null);
   protected readonly loading = signal(false);
@@ -33,7 +46,30 @@ export class GeneralLedger {
   });
 
   constructor() {
+    this.loadFilterOptions();
     this.generate();
+  }
+
+  private loadFilterOptions() {
+    this.accountService.search({ onlyLeaf: true }).subscribe({
+      next: groups =>
+        this.groupOptions.set(
+          (groups ?? []).map(g => ({ value: g.name, label: g.name })),
+        ),
+      error: () => {},
+    });
+    this.ledgerService.searchList({ withoutCashAtBankAndCashInHand: false }).subscribe({
+      next: result =>
+        this.ledgerOptions.set(
+          result.items.map(l => ({ value: l.ledgerName, label: l.ledgerName })),
+        ),
+      error: () => {},
+    });
+    this.costCenterService.search({ activeOnly: true }).subscribe({
+      next: list =>
+        this.costCenterOptions.set(list.map(c => ({ value: c.name, label: c.name }))),
+      error: () => {},
+    });
   }
 
   generate() {
@@ -47,9 +83,9 @@ export class GeneralLedger {
       .generalLedger({
         fromDate: this.fromDate(),
         toDate: this.toDate(),
-        groupName: this.groupName().trim() || null,
-        ledger: this.ledger().trim() || null,
-        costCenter: this.costCenter().trim() || null,
+        groupName: this.selectedGroups().join(',') || null,
+        ledger: this.selectedLedgers().join(',') || null,
+        costCenter: this.selectedCostCenter()[0] ?? null,
       })
       .subscribe({
         next: report => {

@@ -48,18 +48,18 @@
       </div>
       <div>
         <label for="gl-group" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Group <span class="font-normal text-neutral-400">(all)</span></label>
-        <input id="gl-group" type="text" placeholder="All groups" [value]="groupName()" (input)="groupName.set($any($event.target).value)"
-          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+        <app-search-select inputId="gl-group" placeholder="All groups" [options]="groupOptions()"
+          [value]="selectedGroups()" (valueChange)="selectedGroups.set($event)" />
       </div>
       <div>
         <label for="gl-ledger" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Ledger <span class="font-normal text-neutral-400">(all)</span></label>
-        <input id="gl-ledger" type="text" placeholder="All ledgers" [value]="ledger()" (input)="ledger.set($any($event.target).value)"
-          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+        <app-search-select inputId="gl-ledger" placeholder="All ledgers" [options]="ledgerOptions()"
+          [value]="selectedLedgers()" (valueChange)="selectedLedgers.set($event)" />
       </div>
       <div>
         <label for="gl-cc" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Cost center <span class="font-normal text-neutral-400">(all)</span></label>
-        <input id="gl-cc" type="text" placeholder="All cost centers" [value]="costCenter()" (input)="costCenter.set($any($event.target).value)"
-          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+        <app-search-select inputId="gl-cc" placeholder="All cost centers" [multiple]="false" [options]="costCenterOptions()"
+          [value]="selectedCostCenter()" (valueChange)="selectedCostCenter.set($event)" />
       </div>
       <div class="flex items-end">
         <button type="button" (click)="generate()" [disabled]="loading()"

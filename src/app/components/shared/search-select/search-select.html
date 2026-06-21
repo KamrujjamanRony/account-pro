@@ -1,0 +1,71 @@
+<div class="relative">
+  <button
+    type="button"
+    [id]="inputId()"
+    (click)="toggleOpen($event)"
+    role="combobox"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open()"
+    class="flex w-full items-center justify-between gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"
+  >
+    <span class="truncate" [class.text-neutral-400]="!value().length">{{ triggerLabel() }}</span>
+    <svg class="h-4 w-4 shrink-0 text-neutral-400 transition-transform" [class.rotate-180]="open()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  </button>
+
+  @if (value().length) {
+    <button
+      type="button"
+      (click)="clear($event)"
+      aria-label="Clear selection"
+      class="absolute right-9 top-1/2 -translate-y-1/2 rounded p-0.5 text-neutral-400 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600 dark:hover:text-neutral-200"
+    >
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+  }
+
+  @if (open()) {
+    <div class="absolute z-20 mt-1 w-full rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+      <div class="p-2">
+        <input
+          type="search"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+          (keydown.escape)="open.set(false)"
+          placeholder="Search…"
+          aria-label="Search options"
+          class="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-600 dark:bg-neutral-900"
+        />
+      </div>
+      <ul role="listbox" [attr.aria-multiselectable]="multiple()" class="max-h-56 overflow-y-auto pb-1">
+        @for (opt of filtered(); track opt.value) {
+          <li role="option" [attr.aria-selected]="isSelected(opt.value)">
+            <button
+              type="button"
+              (click)="toggleOption(opt)"
+              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              [class.bg-primary-50]="!multiple() && isSelected(opt.value)"
+              [class.dark:bg-primary-950]="!multiple() && isSelected(opt.value)"
+            >
+              @if (multiple()) {
+                <input type="checkbox" tabindex="-1" [checked]="isSelected(opt.value)"
+                  class="pointer-events-none h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+              }
+              <span class="truncate">{{ opt.label }}</span>
+              @if (!multiple() && isSelected(opt.value)) {
+                <svg class="ml-auto h-4 w-4 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              }
+            </button>
+          </li>
+        } @empty {
+          <li class="px-3 py-3 text-center text-sm text-neutral-500">No matches.</li>
+        }
+      </ul>
+    </div>
+  }
+</div>
