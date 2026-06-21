@@ -128,7 +128,7 @@ export class GeneralLedger {
       [r.title],
       [`Date: ${this.fmtDate(r.fromDate)} to ${this.fmtDate(r.toDate)} | Cost Center: ${r.costCenter}`],
       [],
-      ['Date', 'Vch. No.', 'Narration', 'Short Narration', 'Dr. Amount', 'Cr. Amount', 'Balance'],
+      ['Date', 'Vch. No.', 'Narration', 'Dr. Amount', 'Cr. Amount', 'Balance'],
     ];
 
     for (const group of r.groups) {
@@ -137,16 +137,16 @@ export class GeneralLedger {
         rows.push([account.ledgerName]);
         for (const l of account.lines) {
           rows.push([
-            this.fmtDate(l.date), l.voucherNo, l.narration, l.shortNarration,
+            this.fmtDate(l.date), l.voucherNo, l.narration,
             l.debit, l.credit, balance(l.balance, l.balanceSide),
           ]);
         }
         if (account.hasSubTotal) {
-          rows.push(['Sub Total :', '', '', '', account.subTotalDebit, account.subTotalCredit, '']);
+          rows.push(['Sub Total :', '', '', account.subTotalDebit, account.subTotalCredit, '']);
         }
       }
       rows.push([
-        `Summary for ${group.groupName} :`, '', '', '',
+        `Summary for ${group.groupName} :`, '', '',
         group.summaryDebit, group.summaryCredit, balance(group.closingBalance, group.closingSide),
       ]);
     }

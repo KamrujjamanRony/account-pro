@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, DOCUMENT } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { CostCenterService } from '../../services/cost-center-service';
@@ -39,6 +40,7 @@ export class Voucher {
   private cdr = inject(ChangeDetectorRef);
   private document = inject(DOCUMENT);
   private excel = inject(ExcelExportService);
+  private route = inject(ActivatedRoute);
 
   protected readonly types = VOUCHER_TYPES;
 
@@ -183,6 +185,28 @@ export class Voucher {
     this.loadCostCenters();
     // A user-driven type change rebuilds the entry grid for that type.
     this.form.controls.type.valueChanges.subscribe(type => this.applyType(type, true));
+    // Deep link from Cash Book / Bank Book: ?vno=<voucherNo> opens the voucher's
+    // read-only view modal (with its Print button).
+    const vno = this.route.snapshot.queryParamMap.get('vno');
+    if (vno) this.openByVoucherNo(vno);
+  }
+
+  /** Resolve a voucher by its number and open its read-only view modal. */
+  private openByVoucherNo(voucherNo: string) {
+    const target = voucherNo.trim().toLowerCase();
+    this.service.search({}).subscribe({
+      next: result => {
+        const match = result.items.find(
+          v => String(v.voucherNo ?? '').trim().toLowerCase() === target,
+        );
+        if (match) {
+          this.openView(match);
+        } else {
+          this.alert.error(`Voucher "${voucherNo}" was not found.`);
+        }
+      },
+      error: () => this.alert.error('Failed to load the voucher.'),
+    });
   }
 
   get lines() {

@@ -1,13 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { BookKind, CashBookLine, CashBookReport } from '../../models/report.model';
 
 @Component({
   selector: 'app-cash-bank-book',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, RouterLink],
   templateUrl: './cash-bank-book.html',
   styleUrl: './cash-bank-book.css',
 })

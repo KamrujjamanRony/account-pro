@@ -96,7 +96,6 @@
             <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Date</th>
             <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Vch. No.</th>
             <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Narration</th>
-            <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Short Narration</th>
             <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Dr. Amount</th>
             <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Cr. Amount</th>
             <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Balance</th>
@@ -106,20 +105,19 @@
           @for (group of r.groups; track $index) {
             <!-- Group heading -->
             <tr>
-              <th scope="row" colspan="7" class="pt-4 pb-1 text-left font-bold text-neutral-800 italic">{{ group.groupName }}</th>
+              <th scope="row" colspan="6" class="pt-4 pb-1 text-left font-bold text-neutral-800 italic">{{ group.groupName }}</th>
             </tr>
 
             @for (account of group.accounts; track $index) {
               <!-- Ledger account heading -->
               <tr>
-                <th scope="row" colspan="7" class="pt-2 pb-1 text-left font-semibold text-neutral-700">{{ account.ledgerName }}</th>
+                <th scope="row" colspan="6" class="pt-2 pb-1 text-left font-semibold text-neutral-700">{{ account.ledgerName }}</th>
               </tr>
               @for (line of account.lines; track $index) {
                 <tr class="border-t border-neutral-200">
                   <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(line.date) }}</td>
                   <td class="py-2 px-3 whitespace-nowrap text-neutral-700">{{ line.voucherNo }}</td>
                   <td class="py-2 px-3 text-neutral-700">{{ line.narration }}</td>
-                  <td class="py-2 px-3 text-neutral-700">{{ line.shortNarration }}</td>
                   <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.debit | number:'1.2-2' }}</td>
                   <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.credit | number:'1.2-2' }}</td>
                   <td class="py-2 pl-3 whitespace-nowrap text-right tabular-nums text-neutral-700">
@@ -130,7 +128,7 @@
               <!-- Account sub total (shown when the account has more than one movement line) -->
               @if (account.hasSubTotal) {
                 <tr class="border-t border-neutral-300 font-bold text-neutral-900">
-                  <td class="py-2 pr-3" colspan="4">Sub Total :</td>
+                  <td class="py-2 pr-3" colspan="3">Sub Total :</td>
                   <td class="py-2 pl-3 text-right tabular-nums">{{ account.subTotalDebit | number:'1.2-2' }}</td>
                   <td class="py-2 pl-3 text-right tabular-nums">{{ account.subTotalCredit | number:'1.2-2' }}</td>
                   <td class="py-2 pl-3"></td>
@@ -138,13 +136,13 @@
               }
             } @empty {
               <tr class="border-t border-neutral-200">
-                <td colspan="7" class="py-2 text-neutral-400">No entries.</td>
+                <td colspan="6" class="py-2 text-neutral-400">No entries.</td>
               </tr>
             }
 
             <!-- Group summary -->
             <tr class="border-t-2 border-neutral-300 font-bold text-neutral-900 italic">
-              <td class="py-2 pr-3" colspan="4">Summary for {{ group.groupName }} :</td>
+              <td class="py-2 pr-3" colspan="3">Summary for {{ group.groupName }} :</td>
               <td class="py-2 pl-3 text-right tabular-nums">{{ group.summaryDebit | number:'1.2-2' }}</td>
               <td class="py-2 pl-3 text-right tabular-nums">{{ group.summaryCredit | number:'1.2-2' }}</td>
               <td class="py-2 pl-3 whitespace-nowrap text-right tabular-nums">
@@ -153,7 +151,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="7" class="py-6 text-center text-neutral-400">No data for the selected filters.</td>
+              <td colspan="6" class="py-6 text-center text-neutral-400">No data for the selected filters.</td>
             </tr>
           }
         </tbody>
