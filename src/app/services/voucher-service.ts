@@ -12,13 +12,13 @@ export class VoucherService {
   private baseUrl = `${environment.apiUrl}/Voucher`;
 
   /**
-   * Cash & bank ledgers from the report endpoint. `section` selects the subset:
-   * "" → all cash & bank, "Cash-in-Hand" → cash, "Cash-at-Bank" → bank.
+   * Cash & bank ledgers from the ledger endpoint. `section` selects the subset:
+   * "" → all cash & bank, "cash" → cash in hand, "bank" → cash at bank.
    */
   cashBankBalances(section = ''): Observable<LedgerOption[]> {
     type Row = Record<string, unknown>;
     return this.http
-      .post<ApiResponse<Row[] | { items?: Row[] }>>(`${environment.apiUrl}/Report/CashBankBalance`, {
+      .post<ApiResponse<Row[] | { items?: Row[] }>>(`${environment.apiUrl}/Ledger/CashBankBalance`, {
         section,
       })
       .pipe(

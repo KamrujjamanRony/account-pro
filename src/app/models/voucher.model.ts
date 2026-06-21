@@ -86,10 +86,10 @@ export const DEFAULT_VOUCHER_BEHAVIOR: VoucherTypeBehavior = {
 };
 
 export const VOUCHER_TYPE_BEHAVIOR: Record<string, VoucherTypeBehavior> = {
-  CR: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false, firstSide: 'debit' },
-  CP: { lockFirst: true, firstSection: 'Cash-in-Hand', cashBankAll: false, firstSide: 'credit' },
-  BR: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false, firstSide: 'debit' },
-  BP: { lockFirst: true, firstSection: 'Cash-at-Bank', cashBankAll: false, firstSide: 'credit' },
+  CR: { lockFirst: true, firstSection: 'cash', cashBankAll: false, firstSide: 'debit' },
+  CP: { lockFirst: true, firstSection: 'cash', cashBankAll: false, firstSide: 'credit' },
+  BR: { lockFirst: true, firstSection: 'bank', cashBankAll: false, firstSide: 'debit' },
+  BP: { lockFirst: true, firstSection: 'bank', cashBankAll: false, firstSide: 'credit' },
   CV: { lockFirst: false, cashBankAll: true },
   JV: { lockFirst: false, cashBankAll: false },
 };
