@@ -1,0 +1,131 @@
+<div class="mx-auto max-w-7xl px-4 pb-12">
+  <!-- Header -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Cost Centers</h1>
+      <p class="text-sm text-neutral-500">Manage cost centers used to tag transactions.</p>
+    </div>
+    <button
+      *appCan="'Cost Center:create'"
+      type="button"
+      (click)="openCreate()"
+      class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+    >
+      + Add cost center
+    </button>
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Search -->
+  <div class="mb-3">
+    <label for="cost-center-search" class="sr-only">Search cost centers</label>
+    <input id="cost-center-search" type="search" placeholder="Search by code or name…"
+      [value]="search()" (input)="search.set($any($event.target).value)"
+      class="w-full max-w-xs rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <table class="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
+      <thead class="bg-neutral-600 dark:bg-neutral-800/50">
+        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-100">
+          <th scope="col" class="px-4 py-3">Code</th>
+          <th scope="col" class="px-4 py-3">Name</th>
+          <th scope="col" class="px-4 py-3">Note</th>
+          <th scope="col" class="px-4 py-3">Status</th>
+          <th scope="col" class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+        @if (loading()) {
+          <tr><td colspan="5" class="px-4 py-8 text-center text-neutral-500">Loading…</td></tr>
+        } @else if (filteredCostCenters().length === 0) {
+          <tr><td colspan="5" class="px-4 py-8 text-center text-neutral-500">No cost centers found. Add one to get started.</td></tr>
+        } @else {
+          @for (cc of filteredCostCenters(); track cc.id) {
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+              <td class="px-4 py-3 font-medium text-neutral-900 dark:text-white">{{ cc.code }}</td>
+              <td class="px-4 py-3 text-neutral-700 dark:text-neutral-300">{{ cc.name }}</td>
+              <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ cc.note }}</td>
+              <td class="px-4 py-3">
+                @if (cc.isActive) {
+                  <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">Active</span>
+                } @else {
+                  <span class="inline-flex rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">Inactive</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                <button *appCan="'Cost Center:edit'" type="button" (click)="openEdit(cc)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                <button *appCan="'Cost Center:delete'" type="button" (click)="remove(cc)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Form dialog -->
+@if (showForm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="cost-center-form-title">
+    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <h2 id="cost-center-form-title" class="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
+        {{ editingId() ? 'Edit cost center' : 'Add cost center' }}
+      </h2>
+
+      @if (formError()) {
+        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formError() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+        <div>
+          <label for="cost-center-code" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Code</label>
+          <input id="cost-center-code" type="text" formControlName="code"
+            (keydown.enter)="onFieldEnter($event, 'cost-center-name')"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          @if (form.controls.code.touched && form.controls.code.invalid) {
+            <p class="mt-1 text-xs text-red-600">Code is required.</p>
+          }
+        </div>
+
+        <div>
+          <label for="cost-center-name" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Name</label>
+          <input id="cost-center-name" type="text" formControlName="name"
+            (keydown.enter)="onFieldEnter($event, 'cost-center-note')"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <p class="mt-1 text-xs text-red-600">Name is required.</p>
+          }
+        </div>
+
+        <div>
+          <label for="cost-center-note" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Note</label>
+          <textarea id="cost-center-note" rows="2" formControlName="note"
+            (keydown.enter)="submitFromKeyboard($event)"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"></textarea>
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" formControlName="isActive"
+            class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+          Active
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" (click)="closeForm()"
+            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
+          <button id="cost-center-save" type="submit" [disabled]="saving()"
+            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
+            {{ saving() ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

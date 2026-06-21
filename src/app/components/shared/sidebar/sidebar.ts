@@ -105,6 +105,11 @@ export class Sidebar {
       icon: 'M9 2h6a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-3 2V4a2 2 0 0 1 2-2Zm0 6h6M9 12h6',
     },
     {
+      label: 'Cost Center',
+      path: '/cost-center',
+      icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 4v6l4 2',
+    },
+    {
       label: 'Report',
       icon: 'M9 17v-5m3 5v-8m3 8v-3M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z',
       children: [

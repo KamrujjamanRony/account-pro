@@ -42,6 +42,13 @@ export const routes: Routes = [
         title: `Voucher | ${companyName}`,
       },
       {
+        path: 'cost-center',
+        loadComponent: () => import('./pages/cost-centers/cost-centers').then(m => m.CostCenters),
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Cost Centers', menu: 'Cost Center' },
+        title: `Cost Centers | ${companyName}`,
+      },
+      {
         path: 'cash-book',
         loadComponent: () => import('./pages/cash-bank-book/cash-bank-book').then(m => m.CashBankBook),
         canActivate: [permissionGuard],
