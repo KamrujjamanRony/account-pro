@@ -126,13 +126,16 @@ export class ReportService {
    * Day Book — every voucher posted within a date range, listed chronologically
    * with its Group / Ledger / Short Narration / Dr / Cr detail rows, a per-voucher
    * Sub Total and narration, grouped into sections with a closing Summary.
-   * Optional {@link DayBookQuery.type} narrows the result to one voucher type.
+   * Optional {@link DayBookQuery.type}, {@link DayBookQuery.groupName} (group ids)
+   * and {@link DayBookQuery.ledger} (ledger ids) narrow the result server-side.
    */
   dayBook(query: DayBookQuery): Observable<DayBookReport> {
     const body: DayBookQuery = {
       fromDate: query.fromDate,
       toDate: query.toDate,
       type: query.type ?? null,
+      groupName: query.groupName?.length ? query.groupName : null,
+      ledger: query.ledger?.length ? query.ledger : null,
     };
     return this.http
       .post<ApiResponse<unknown>>(`${this.baseUrl}/DayBook`, body)

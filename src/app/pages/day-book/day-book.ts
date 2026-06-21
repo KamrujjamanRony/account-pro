@@ -1,6 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
+import { ChartOfAccountService } from '../../services/chart-of-account-service';
+import { LedgerService } from '../../services/ledger-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { DayBookReport } from '../../models/report.model';
 import { VOUCHER_TYPES } from '../../models/voucher.model';
@@ -14,6 +16,8 @@ import { SearchSelect, SelectOption } from '../../components/shared/search-selec
 })
 export class DayBook {
   private service = inject(ReportService);
+  private accountService = inject(ChartOfAccountService);
+  private ledgerService = inject(LedgerService);
   private excel = inject(ExcelExportService);
 
   protected readonly fromDate = signal(this.startOfMonth());
@@ -22,11 +26,19 @@ export class DayBook {
   /** Voucher-type filter; empty means "all types". Single-select. */
   protected readonly selectedType = signal<string[]>([]);
 
+  /** Group & ledger filter selections (chart-of-account / ledger ids as strings); empty means "all". Multi-select. */
+  protected readonly selectedGroups = signal<string[]>([]);
+  protected readonly selectedLedgers = signal<string[]>([]);
+
   /** Type dropdown options (code → label), e.g. "CR — Cash Receipt". */
   protected readonly typeOptions: SelectOption[] = VOUCHER_TYPES.map(t => ({
     value: t.code,
     label: `${t.code} — ${t.label}`,
   }));
+
+  /** Dropdown option lists (option value = record id). */
+  protected readonly groupOptions = signal<SelectOption[]>([]);
+  protected readonly ledgerOptions = signal<SelectOption[]>([]);
 
   protected readonly report = signal<DayBookReport | null>(null);
   protected readonly loading = signal(false);
@@ -40,7 +52,29 @@ export class DayBook {
   });
 
   constructor() {
+    this.loadFilterOptions();
     this.generate();
+  }
+
+  private loadFilterOptions() {
+    this.accountService.search({ onlyLeaf: true }).subscribe({
+      next: groups =>
+        this.groupOptions.set(
+          (groups ?? [])
+            .filter(g => g.id != null)
+            .map(g => ({ value: String(g.id), label: g.name })),
+        ),
+      error: () => {},
+    });
+    this.ledgerService.searchList({ withoutCashAtBankAndCashInHand: false }).subscribe({
+      next: result =>
+        this.ledgerOptions.set(
+          result.items
+            .filter(l => l.id != null)
+            .map(l => ({ value: String(l.id), label: l.ledgerName })),
+        ),
+      error: () => {},
+    });
   }
 
   generate() {
@@ -55,6 +89,8 @@ export class DayBook {
         fromDate: this.fromDate(),
         toDate: this.toDate(),
         type: this.selectedType()[0] ?? null,
+        groupName: this.selectedGroups().map(Number),
+        ledger: this.selectedLedgers().map(Number),
       })
       .subscribe({
         next: report => {

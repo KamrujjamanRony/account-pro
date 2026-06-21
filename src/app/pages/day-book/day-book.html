@@ -35,7 +35,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-900">
       <div>
         <label for="db-from" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">From date</label>
         <input id="db-from" type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value)"
@@ -50,6 +50,16 @@
         <label for="db-type" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Type <span class="font-normal text-neutral-400">(all)</span></label>
         <app-search-select inputId="db-type" placeholder="All types" [multiple]="false" [options]="typeOptions"
           [value]="selectedType()" (valueChange)="selectedType.set($event)" />
+      </div>
+      <div>
+        <label for="db-group" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Group <span class="font-normal text-neutral-400">(all)</span></label>
+        <app-search-select inputId="db-group" placeholder="All groups" [options]="groupOptions()"
+          [value]="selectedGroups()" (valueChange)="selectedGroups.set($event)" />
+      </div>
+      <div>
+        <label for="db-ledger" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Ledger <span class="font-normal text-neutral-400">(all)</span></label>
+        <app-search-select inputId="db-ledger" placeholder="All ledgers" [options]="ledgerOptions()"
+          [value]="selectedLedgers()" (valueChange)="selectedLedgers.set($event)" />
       </div>
       <div class="flex items-end">
         <button type="button" (click)="generate()" [disabled]="loading()"

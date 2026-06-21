@@ -310,6 +310,10 @@ export interface DayBookReport {
 export interface DayBookQuery extends ReportDateQuery {
   /** Optional voucher-type filter (code, e.g. "JV"); null = all types. */
   type?: string | null;
+  /** Optional group filter as chart-of-account ids; null/empty = all groups. */
+  groupName?: number[] | null;
+  /** Optional ledger filter as ledger ids; null/empty = all ledgers. */
+  ledger?: number[] | null;
 }
 
 /** A child ledger row shown under a balance-sheet group in the detailed view. */
