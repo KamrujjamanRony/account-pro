@@ -3,6 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
 import { ChartOfAccountService } from '../../services/chart-of-account-service';
 import { LedgerService } from '../../services/ledger-service';
+import { CostCenterService } from '../../services/cost-center-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { DayBookReport } from '../../models/report.model';
 import { VOUCHER_TYPES } from '../../models/voucher.model';
@@ -18,6 +19,7 @@ export class DayBook {
   private service = inject(ReportService);
   private accountService = inject(ChartOfAccountService);
   private ledgerService = inject(LedgerService);
+  private costCenterService = inject(CostCenterService);
   private excel = inject(ExcelExportService);
 
   protected readonly fromDate = signal(this.startOfMonth());
@@ -30,15 +32,19 @@ export class DayBook {
   protected readonly selectedGroups = signal<string[]>([]);
   protected readonly selectedLedgers = signal<string[]>([]);
 
+  /** Cost-center filter selection (name); empty means "all". Single-select. */
+  protected readonly selectedCostCenter = signal<string[]>([]);
+
   /** Type dropdown options (code → label), e.g. "CR — Cash Receipt". */
   protected readonly typeOptions: SelectOption[] = VOUCHER_TYPES.map(t => ({
     value: t.code,
     label: `${t.code} — ${t.label}`,
   }));
 
-  /** Dropdown option lists (option value = record id). */
+  /** Dropdown option lists (group & ledger value = record id; cost center = name). */
   protected readonly groupOptions = signal<SelectOption[]>([]);
   protected readonly ledgerOptions = signal<SelectOption[]>([]);
+  protected readonly costCenterOptions = signal<SelectOption[]>([]);
 
   protected readonly report = signal<DayBookReport | null>(null);
   protected readonly loading = signal(false);
@@ -75,6 +81,11 @@ export class DayBook {
         ),
       error: () => {},
     });
+    this.costCenterService.search({ activeOnly: true }).subscribe({
+      next: list =>
+        this.costCenterOptions.set(list.map(c => ({ value: c.name, label: c.name }))),
+      error: () => {},
+    });
   }
 
   generate() {
@@ -91,6 +102,7 @@ export class DayBook {
         type: this.selectedType()[0] ?? null,
         groupName: this.selectedGroups().map(Number),
         ledger: this.selectedLedgers().map(Number),
+        costCenter: this.selectedCostCenter()[0] ?? null,
       })
       .subscribe({
         next: report => {

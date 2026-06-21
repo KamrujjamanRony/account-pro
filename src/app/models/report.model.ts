@@ -314,6 +314,8 @@ export interface DayBookQuery extends ReportDateQuery {
   groupName?: number[] | null;
   /** Optional ledger filter as ledger ids; null/empty = all ledgers. */
   ledger?: number[] | null;
+  /** Optional cost-center filter (name); null = all cost centers. */
+  costCenter?: string | null;
 }
 
 /** A child ledger row shown under a balance-sheet group in the detailed view. */

@@ -61,6 +61,11 @@
         <app-search-select inputId="db-ledger" placeholder="All ledgers" [options]="ledgerOptions()"
           [value]="selectedLedgers()" (valueChange)="selectedLedgers.set($event)" />
       </div>
+      <div>
+        <label for="db-cc" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Cost center <span class="font-normal text-neutral-400">(all)</span></label>
+        <app-search-select inputId="db-cc" placeholder="All cost centers" [multiple]="false" [options]="costCenterOptions()"
+          [value]="selectedCostCenter()" (valueChange)="selectedCostCenter.set($event)" />
+      </div>
       <div class="flex items-end">
         <button type="button" (click)="generate()" [disabled]="loading()"
           class="w-full rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100">
