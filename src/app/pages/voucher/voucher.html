@@ -315,9 +315,14 @@
 
           <div>
             <label for="form-cost" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Cost center</label>
-            <input id="form-cost" type="text" formControlName="costCenter"
+            <select id="form-cost" formControlName="costCenter"
               (keydown.enter)="submitFromKeyboard($event)"
-              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+              <option value="">None</option>
+              @for (cc of costCenters(); track cc.id) {
+                <option [value]="cc.id">{{ cc.name }}</option>
+              }
+            </select>
           </div>
 
           <div class="flex justify-end gap-2 pt-2">
@@ -366,7 +371,7 @@
         </div>
         <div>
           <dt class="text-xs font-medium uppercase tracking-wide text-neutral-500">Cost center</dt>
-          <dd class="mt-0.5 text-neutral-900 dark:text-neutral-200">{{ v.costCenter || '—' }}</dd>
+          <dd class="mt-0.5 text-neutral-900 dark:text-neutral-200">{{ costCenterName(v.costCenter) || '—' }}</dd>
         </div>
       </dl>
 

@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular
 import { DatePipe, DecimalPipe, DOCUMENT } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
+import { CostCenterService } from '../../services/cost-center-service';
 import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
 import {
@@ -12,6 +13,7 @@ import {
   VOUCHER_TYPES,
 } from '../../models/voucher.model';
 import { Ledger } from '../../models/ledger.model';
+import { CostCenter } from '../../models/cost-center.model';
 import { VoucherService } from '../../services/voucher-service';
 import { CanDirective } from '../../directives/can.directive';
 
@@ -29,6 +31,7 @@ export class Voucher {
   private fb = inject(FormBuilder);
   private service = inject(VoucherService);
   private ledgerService = inject(LedgerService);
+  private costCenterService = inject(CostCenterService);
   private auth = inject(AuthService);
   private alert = inject(AlertService);
   private cdr = inject(ChangeDetectorRef);
@@ -38,6 +41,7 @@ export class Voucher {
 
   protected readonly vouchers = signal<VoucherModel[]>([]);
   protected readonly ledgers = signal<Ledger[]>([]);
+  protected readonly costCenters = signal<CostCenter[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal('');
 
@@ -166,6 +170,7 @@ export class Voucher {
   constructor() {
     this.loadVouchers();
     this.loadLedgers();
+    this.loadCostCenters();
     // A user-driven type change rebuilds the entry grid for that type.
     this.form.controls.type.valueChanges.subscribe(type => this.applyType(type, true));
   }
@@ -289,6 +294,20 @@ export class Voucher {
       next: result => this.ledgers.set(result.items),
       error: () => {},
     });
+  }
+
+  private loadCostCenters() {
+    this.costCenterService.search({ activeOnly: true }).subscribe({
+      next: items => this.costCenters.set(items),
+      error: () => {},
+    });
+  }
+
+  /** Resolve a cost-center id to its name for read-only display. */
+  costCenterName(value: string | null | undefined): string {
+    if (value == null || value === '') return '';
+    const match = this.costCenters().find(c => String(c.id) === String(value));
+    return match?.name ?? String(value);
   }
 
   clearFilters() {
