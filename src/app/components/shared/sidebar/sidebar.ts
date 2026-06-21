@@ -43,13 +43,12 @@ export class Sidebar {
   private readonly openGroups = signal<ReadonlySet<string>>(new Set());
 
   constructor() {
-    // Auto-expand the group that owns the active route on every navigation.
+    // On every navigation, keep only the group that owns the active route open
+    // (collapse any other group when a different menu is clicked).
     effect(() => {
       const url = this.currentUrl();
       const active = this.navItems.find(item => this.isChildActive(item, url));
-      if (active && !this.openGroups().has(active.label)) {
-        this.openGroups.update(set => new Set(set).add(active.label));
-      }
+      this.openGroups.set(active ? new Set([active.label]) : new Set());
     });
   }
 
@@ -80,11 +79,8 @@ export class Sidebar {
   }
 
   protected toggleGroup(label: string) {
-    this.openGroups.update(set => {
-      const next = new Set(set);
-      next.has(label) ? next.delete(label) : next.add(label);
-      return next;
-    });
+    // Accordion: open the clicked group and close any other.
+    this.openGroups.update(set => (set.has(label) ? new Set() : new Set([label])));
   }
 
   protected readonly navItems: NavItem[] = [
