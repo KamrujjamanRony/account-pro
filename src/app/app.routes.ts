@@ -73,6 +73,13 @@ export const routes: Routes = [
         title: `Receipt & Payment Statement | ${companyName}`,
       },
       {
+        path: 'day-book',
+        loadComponent: () => import('./pages/day-book/day-book').then(m => m.DayBook),
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Day Book', menu: 'Day Book' },
+        title: `Day Book | ${companyName}`,
+      },
+      {
         path: 'general-ledger',
         loadComponent: () => import('./pages/general-ledger/general-ledger').then(m => m.GeneralLedger),
         canActivate: [permissionGuard],
@@ -92,6 +99,13 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: { breadcrumb: 'Balance Sheet', menu: 'Balance Sheet' },
         title: `Balance Sheet | ${companyName}`,
+      },
+      {
+        path: 'profit-loss',
+        loadComponent: () => import('./pages/profit-loss/profit-loss').then(m => m.ProfitLoss),
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Profit & Loss Account', menu: 'Profit & Loss' },
+        title: `Profit & Loss Account | ${companyName}`,
       },
       {
         path: 'user-list',

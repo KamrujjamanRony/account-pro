@@ -246,6 +246,72 @@ export interface GeneralLedgerQuery extends ReportDateQuery {
   costCenter?: string | null;
 }
 
+/** A single Group / Ledger / Short Narration / Dr / Cr detail row of a voucher. */
+export interface DayBookDetail {
+  /** Owning group name, e.g. "Cash-in-Hand". */
+  groupName: string;
+  /** Ledger name, e.g. "Cash". */
+  ledgerName: string;
+  /** Short narration column. */
+  shortNarration: string;
+  /** Dr. Amount column. */
+  debit: number;
+  /** Cr. Amount column. */
+  credit: number;
+}
+
+/** A single voucher block within a Day Book section. */
+export interface DayBookVoucher {
+  /** Voucher identifier shown after "ID :", e.g. "A-625". */
+  voucherId: string;
+  /** Posting date (ISO or whatever the API returns). */
+  date: string;
+  /** Type label shown after "Type :", e.g. "CR - Cash Receive". */
+  type: string;
+  /** Reference shown after "Reference :", e.g. "123546" or "N/A". */
+  reference: string;
+  /** Cost center label shown after "Cost Center :"; empty when none. */
+  costCenter: string;
+  /** Full narration shown on the "Narration :" line below the voucher. */
+  narration: string;
+  /** The voucher's detail (Dr/Cr) rows. */
+  details: DayBookDetail[];
+  /** Sum of the voucher's debits (the "Sub Total :" row). */
+  subTotalDebit: number;
+  /** Sum of the voucher's credits (the "Sub Total :" row). */
+  subTotalCredit: number;
+}
+
+/** A Day Book section (e.g. "Account") grouping vouchers with a running summary. */
+export interface DayBookSection {
+  /** Section heading shown above the vouchers, e.g. "Account". */
+  sectionName: string;
+  vouchers: DayBookVoucher[];
+  /** Section total debit (the "Summary for … :" row). */
+  summaryDebit: number;
+  /** Section total credit (the "Summary for … :" row). */
+  summaryCredit: number;
+}
+
+/**
+ * Normalised Day Book report, modelled on the printed layout:
+ * section → voucher (header / Group-Ledger detail rows / Sub Total / Narration)
+ * → section Summary, with Group / Ledger / Short Narration / Dr / Cr columns.
+ */
+export interface DayBookReport {
+  companyName: string;
+  title: string;
+  fromDate: string;
+  toDate: string;
+  sections: DayBookSection[];
+}
+
+/** Filter query for the Day Book endpoint. */
+export interface DayBookQuery extends ReportDateQuery {
+  /** Optional voucher-type filter (code, e.g. "JV"); null = all types. */
+  type?: string | null;
+}
+
 /** A child ledger row shown under a balance-sheet group in the detailed view. */
 export interface BalanceSheetLedger {
   /** Ledger code, e.g. "L-0007"; empty for synthesized rows like the year's P&L. */
@@ -318,4 +384,62 @@ export interface BalanceSheetQuery {
   asOfDate: string;
   /** Start of the fiscal year, ISO `yyyy-MM-dd`. */
   fiscalYearStart: string;
+}
+
+/**
+ * Visual role of a Profit & Loss row, driving indentation and emphasis:
+ * `section` (heading, e.g. "Operating Revenue"), `group` (e.g. "Sales Account"),
+ * `ledger` (e.g. "Sales"), `subtotal` ("Sub Total :"), `summary`
+ * ("Summary for Gross Profit :") and `net` ("Net Profit\Loss :").
+ */
+export type ProfitLossRowKind = 'section' | 'group' | 'ledger' | 'subtotal' | 'summary' | 'net';
+
+/**
+ * A single line in the Profit & Loss statement. The report is a flat, ordered
+ * list of rows (mirroring the printed statement) carrying the three money
+ * columns — Upto Previous / Current Period / Amount — plus a nesting `level`
+ * for indentation and a `kind` that selects the row's emphasis.
+ */
+export interface ProfitLossRow {
+  /** Left-column label, e.g. "Operating Revenue", "Sales", "Sub Total :". */
+  label: string;
+  /** "Upto Previous" column. */
+  uptoPrevious: number;
+  /** "Current Period" column. */
+  currentPeriod: number;
+  /** "Amount" column (cumulative). */
+  amount: number;
+  /** Nesting depth for indentation (0 = section, 1 = group, 2+ = ledger). */
+  level: number;
+  /** Visual role of the row. */
+  kind: ProfitLossRowKind;
+}
+
+/**
+ * Normalised Profit & Loss Account, modelled on the printed layout:
+ * sections → groups (+ optional ledger detail) → Sub Total, interleaved with
+ * Gross Profit / Net Profit summary rows, with Group / Upto Previous /
+ * Current Period / Amount columns.
+ */
+export interface ProfitLossReport {
+  companyName: string;
+  title: string;
+  fromDate: string;
+  toDate: string;
+  /** Cost-center filter label shown in the letterhead, e.g. "all". */
+  costCenter: string;
+  /** Detail level label shown in the letterhead, e.g. "Group". */
+  level: string;
+  rows: ProfitLossRow[];
+}
+
+/** Detail level for the Profit & Loss view: group totals, or with ledger detail. */
+export type ProfitLossLevel = 'Group' | 'Ledger';
+
+/** Filter query for the Profit & Loss endpoint. */
+export interface ProfitLossQuery extends ReportDateQuery {
+  /** Optional cost-center filter; null = all cost centers. */
+  costCenter?: string | null;
+  /** Detail level: group totals only, or with ledger detail. */
+  level: ProfitLossLevel;
 }

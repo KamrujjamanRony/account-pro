@@ -12,8 +12,17 @@ import {
   BalanceSheetSection,
   BalanceSide,
   BookKind,
+  ProfitLossQuery,
+  ProfitLossReport,
+  ProfitLossRow,
+  ProfitLossRowKind,
   CashBookLine,
   CashBookReport,
+  DayBookDetail,
+  DayBookQuery,
+  DayBookReport,
+  DayBookSection,
+  DayBookVoucher,
   DebitCredit,
   GeneralLedgerAccount,
   GeneralLedgerGroup,
@@ -35,6 +44,16 @@ import {
 } from '../models/report.model';
 
 type Row = Record<string, unknown>;
+
+/** Voucher-type code → display label used to expand the Day Book "Type :" header. */
+const DAY_BOOK_TYPE_LABELS: Record<string, string> = {
+  CR: 'Cash Receive',
+  CP: 'Cash Payment',
+  BR: 'Bank Receive',
+  BP: 'Bank Payment',
+  CV: 'Contra Voucher',
+  JV: 'Journal Voucher',
+};
 
 @Service()
 export class ReportService {
@@ -104,6 +123,23 @@ export class ReportService {
   }
 
   /**
+   * Day Book — every voucher posted within a date range, listed chronologically
+   * with its Group / Ledger / Short Narration / Dr / Cr detail rows, a per-voucher
+   * Sub Total and narration, grouped into sections with a closing Summary.
+   * Optional {@link DayBookQuery.type} narrows the result to one voucher type.
+   */
+  dayBook(query: DayBookQuery): Observable<DayBookReport> {
+    const body: DayBookQuery = {
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      type: query.type ?? null,
+    };
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/DayBook`, body)
+      .pipe(map(res => this.normalizeDayBook(res?.data, query)));
+  }
+
+  /**
    * Balance Sheet — Assets vs Liabilities snapshot as on a date, grouped into
    * sections (Current / Non-Current / Equity) → groups, with optional ledger
    * detail. The endpoint takes the snapshot date and the fiscal-year start.
@@ -116,6 +152,136 @@ export class ReportService {
     return this.http
       .post<ApiResponse<unknown>>(`${this.baseUrl}/BalanceSheet`, body)
       .pipe(map(res => this.normalizeBalanceSheet(res?.data, query)));
+  }
+
+  /**
+   * Profit & Loss Account — revenue, cost of goods sold, income and expenses
+   * for a date range, grouped into sections → groups (with optional ledger
+   * detail), with Upto Previous / Current Period / Amount columns. The endpoint
+   * takes the date range, an optional cost-center filter and the detail level.
+   */
+  profitLoss(query: ProfitLossQuery): Observable<ProfitLossReport> {
+    const body: ProfitLossQuery = {
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+      costCenter: query.costCenter ?? null,
+      level: query.level,
+    };
+    return this.http
+      .post<ApiResponse<unknown>>(`${this.baseUrl}/ProfitLoss`, body)
+      .pipe(map(res => this.normalizeProfitLoss(res?.data, query)));
+  }
+
+  /**
+   * Reshape the (loosely-typed) Profit & Loss payload into a
+   * {@link ProfitLossReport}. The API returns two sibling trees — `income` and
+   * `expense` — of nested chart-of-account nodes (each with Upto Previous /
+   * Current Period / Amount and an `isLedger` flag), plus the Total Income /
+   * Total Expense / Gross Profit / Net Profit totals. We render each tree under
+   * its own heading with a closing total, then the Gross Profit and final
+   * Net Profit\Loss rows, mirroring the printed statement.
+   */
+  private normalizeProfitLoss(data: unknown, query: ProfitLossQuery): ProfitLossReport {
+    const root = (data ?? {}) as Row;
+    const rows: ProfitLossRow[] = [];
+
+    const income = (this.pick(root, ['income', 'incomes']) as Row[]) ?? [];
+    const expense = (this.pick(root, ['expense', 'expenses']) as Row[]) ?? [];
+
+    if (income.length) {
+      rows.push(this.plHeadingRow('Income'));
+      this.flattenPlNodes(income, 1, rows);
+      rows.push(
+        this.plTotalRow('Total Income :', root, 'subtotal', [
+          'totalIncomeUptoPrevious',
+          'totalIncomeCurrentPeriod',
+          'totalIncomeAmount',
+        ]),
+      );
+    }
+
+    if (expense.length) {
+      rows.push(this.plHeadingRow('Expense'));
+      this.flattenPlNodes(expense, 1, rows);
+      rows.push(
+        this.plTotalRow('Total Expense :', root, 'subtotal', [
+          'totalExpenseUptoPrevious',
+          'totalExpenseCurrentPeriod',
+          'totalExpenseAmount',
+        ]),
+      );
+    }
+
+    if (this.pick(root, ['grossProfitAmount', 'grossProfitCurrentPeriod', 'grossProfitUptoPrevious']) != null) {
+      rows.push(
+        this.plTotalRow('Summary for Gross Profit :', root, 'summary', [
+          'grossProfitUptoPrevious',
+          'grossProfitCurrentPeriod',
+          'grossProfitAmount',
+        ]),
+      );
+    }
+
+    const isProfit = this.truthy(this.pick(root, ['isProfit']));
+    rows.push(
+      this.plTotalRow(`Net ${isProfit ? 'Profit' : 'Loss'} :`, root, 'net', [
+        'netProfitUptoPrevious',
+        'netProfitCurrentPeriod',
+        'netProfitAmount',
+      ]),
+    );
+
+    return {
+      companyName: String(
+        this.pick(root, ['companyName', 'company', 'companyTitle']) ?? environment.companyName,
+      ),
+      title: String(this.pick(root, ['title']) ?? 'Profit & Loss Account'),
+      fromDate: String(this.pick(root, ['fromDate', 'dateFrom', 'startDate']) ?? query.fromDate),
+      toDate: String(this.pick(root, ['toDate', 'dateTo', 'endDate']) ?? query.toDate),
+      costCenter: String(this.pick(root, ['costCenter', 'costCentre']) ?? query.costCenter ?? 'all'),
+      level: String(this.pick(root, ['level']) ?? query.level),
+      rows,
+    };
+  }
+
+  /** Flatten a tree of chart-of-account nodes into ordered statement rows. */
+  private flattenPlNodes(nodes: Row[], depth: number, out: ProfitLossRow[]): void {
+    for (const node of nodes) {
+      const children = (this.pick(node, ['children', 'groups', 'ledgers', 'items']) as Row[]) ?? [];
+      const label = String(this.pick(node, ['name', 'label', 'groupName', 'title', 'ledgerName']) ?? '');
+      const kind: ProfitLossRowKind = this.truthy(this.pick(node, ['isLedger'])) ? 'ledger' : 'group';
+      out.push({
+        label,
+        uptoPrevious: this.num(this.pick(node, ['uptoPrevious', 'upToPrevious', 'previous'])) ?? 0,
+        currentPeriod: this.num(this.pick(node, ['currentPeriod', 'current', 'period'])) ?? 0,
+        amount: this.num(this.pick(node, ['amount', 'total', 'closing'])) ?? 0,
+        level: depth,
+        kind,
+      });
+      if (children.length) this.flattenPlNodes(children, depth + 1, out);
+    }
+  }
+
+  /** A bold side heading ("Income" / "Expense") with no figures of its own. */
+  private plHeadingRow(label: string): ProfitLossRow {
+    return { label, uptoPrevious: 0, currentPeriod: 0, amount: 0, level: 0, kind: 'section' };
+  }
+
+  /** A total/summary row reading its three columns from the given root keys. */
+  private plTotalRow(
+    label: string,
+    root: Row,
+    kind: ProfitLossRowKind,
+    [upKey, currentKey, amountKey]: [string, string, string],
+  ): ProfitLossRow {
+    return {
+      label,
+      uptoPrevious: this.num(this.pick(root, [upKey])) ?? 0,
+      currentPeriod: this.num(this.pick(root, [currentKey])) ?? 0,
+      amount: this.num(this.pick(root, [amountKey])) ?? 0,
+      level: 0,
+      kind,
+    };
   }
 
   /**
@@ -404,6 +570,128 @@ export class ReportService {
       if (last) signed += last.balanceSide === 'Cr' ? -last.balance : last.balance;
     }
     return { balance: Math.abs(signed), side: signed < 0 ? 'Cr' : 'Dr' };
+  }
+
+  /**
+   * Reshape the (loosely-typed) Day Book payload into a {@link DayBookReport}.
+   * The payload may already be nested as section → voucher → details, arrive as
+   * a flat array of vouchers, or as a flat array of posting rows tagged with a
+   * voucher id; the latter two are bucketed into a single "Account" section.
+   */
+  private normalizeDayBook(data: unknown, query: DayBookQuery): DayBookReport {
+    const root = (data ?? {}) as Row;
+    const rawSections = this.pick(root, ['sections', 'books', 'groups']) as Row[] | undefined;
+    let sections: DayBookSection[];
+    if (Array.isArray(rawSections) && rawSections.length) {
+      sections = rawSections.map(s => this.toDayBookSection(s));
+    } else {
+      const items = Array.isArray(data)
+        ? (data as Row[])
+        : ((this.pick(root, ['vouchers', 'items', 'rows', 'data', 'details']) as Row[]) ?? []);
+      const vouchers = this.toDayBookVouchers(items);
+      sections = [this.makeDayBookSection('Account', vouchers)];
+    }
+    return {
+      companyName: String(
+        this.pick(root, ['companyName', 'company', 'companyTitle']) ?? environment.companyName,
+      ),
+      title: String(this.pick(root, ['title']) ?? 'Day Book'),
+      fromDate: String(this.pick(root, ['fromDate', 'dateFrom', 'startDate']) ?? query.fromDate),
+      toDate: String(this.pick(root, ['toDate', 'dateTo', 'endDate']) ?? query.toDate),
+      sections,
+    };
+  }
+
+  private toDayBookSection(row: Row): DayBookSection {
+    const items = (this.pick(row, ['vouchers', 'items', 'rows', 'details', 'lines']) as Row[]) ?? [];
+    const vouchers = this.toDayBookVouchers(items);
+    const section = this.makeDayBookSection(
+      String(this.pick(row, ['sectionName', 'section', 'name', 'title']) ?? 'Account'),
+      vouchers,
+    );
+    section.summaryDebit = this.num(this.pick(row, ['summaryDebit', 'totalDebit', 'debit'])) ?? section.summaryDebit;
+    section.summaryCredit = this.num(this.pick(row, ['summaryCredit', 'totalCredit', 'credit'])) ?? section.summaryCredit;
+    return section;
+  }
+
+  private makeDayBookSection(name: string, vouchers: DayBookVoucher[]): DayBookSection {
+    return {
+      sectionName: name,
+      vouchers,
+      summaryDebit: vouchers.reduce((sum, v) => sum + v.subTotalDebit, 0),
+      summaryCredit: vouchers.reduce((sum, v) => sum + v.subTotalCredit, 0),
+    };
+  }
+
+  /**
+   * Build voucher blocks from a list of rows. Each row may already carry its
+   * detail lines (nested voucher), or be a single posting row that we bucket by
+   * voucher id (first-seen order) into a shared block.
+   */
+  private toDayBookVouchers(rows: Row[]): DayBookVoucher[] {
+    const nested = rows.some(
+      r => this.pick(r, ['details', 'lines', 'entries', 'transactions']) != null,
+    );
+    if (nested) return rows.map(r => this.toDayBookVoucher(r));
+
+    const order: string[] = [];
+    const byId = new Map<string, { header: Row; lines: Row[] }>();
+    for (const row of rows) {
+      const id = String(this.pick(row, ['voucherId', 'voucherNo', 'id', 'vNo', 'code']) ?? '');
+      let bucket = byId.get(id);
+      if (!bucket) {
+        bucket = { header: row, lines: [] };
+        byId.set(id, bucket);
+        order.push(id);
+      }
+      bucket.lines.push(row);
+    }
+    return order.map(id => {
+      const { header, lines } = byId.get(id)!;
+      return this.toDayBookVoucher({ ...header, details: lines });
+    });
+  }
+
+  private toDayBookVoucher(row: Row): DayBookVoucher {
+    const rawDetails =
+      (this.pick(row, ['details', 'lines', 'entries', 'transactions', 'rows']) as Row[]) ?? [];
+    const details = rawDetails.map(d => this.toDayBookDetail(d));
+    const subTotalDebit =
+      this.num(this.pick(row, ['subTotalDebit', 'totalDebit'])) ??
+      details.reduce((sum, d) => sum + d.debit, 0);
+    const subTotalCredit =
+      this.num(this.pick(row, ['subTotalCredit', 'totalCredit'])) ??
+      details.reduce((sum, d) => sum + d.credit, 0);
+    return {
+      voucherId: String(this.pick(row, ['voucherId', 'voucherNo', 'id', 'vNo', 'code']) ?? ''),
+      date: String(this.pick(row, ['date', 'voucherDate', 'vDate', 'transactionDate']) ?? ''),
+      type: this.dayBookType(this.pick(row, ['type', 'voucherType', 'typeName'])),
+      reference: String(this.pick(row, ['reference', 'ref', 'refNo']) ?? 'N/A'),
+      costCenter: String(this.pick(row, ['costCenter', 'costCentre']) ?? ''),
+      narration: String(this.pick(row, ['narration', 'remarks', 'description', 'particulars']) ?? ''),
+      details,
+      subTotalDebit,
+      subTotalCredit,
+    };
+  }
+
+  private toDayBookDetail(row: Row): DayBookDetail {
+    return {
+      groupName: String(this.pick(row, ['groupName', 'group', 'natureName']) ?? ''),
+      ledgerName: String(this.pick(row, ['ledgerName', 'ledger', 'name', 'account']) ?? ''),
+      shortNarration: String(this.pick(row, ['shortNarration', 'shortNote', 'narrationShort']) ?? ''),
+      debit: this.num(this.pick(row, ['debit', 'dr', 'debitAmount', 'drAmount'])) ?? 0,
+      credit: this.num(this.pick(row, ['credit', 'cr', 'creditAmount', 'crAmount'])) ?? 0,
+    };
+  }
+
+  /** Expand a bare type code (e.g. "CR") to "CR - Cash Receive"; pass through full labels. */
+  private dayBookType(value: unknown): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    if (raw.includes('-') || raw.includes(' ')) return raw;
+    const label = DAY_BOOK_TYPE_LABELS[raw.toUpperCase()];
+    return label ? `${raw.toUpperCase()} - ${label}` : raw;
   }
 
   /**

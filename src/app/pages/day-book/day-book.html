@@ -1,0 +1,149 @@
+<div class="mx-auto max-w-6xl px-4 pb-12">
+  <!-- Toolbar (hidden when printing) -->
+  <div class="no-print">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Day Book</h1>
+        <p class="text-sm text-neutral-500">
+          Every voucher posted within a date range, listed chronologically with its Dr/Cr detail.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          (click)="exportExcel()"
+          [disabled]="!canPrint()"
+          class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+          </svg>
+          Download Excel
+        </button>
+        <button
+          type="button"
+          (click)="print()"
+          [disabled]="!canPrint()"
+          class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+          </svg>
+          Print / Save PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div>
+        <label for="db-from" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">From date</label>
+        <input id="db-from" type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="db-to" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">To date</label>
+        <input id="db-to" type="date" [value]="toDate()" (change)="toDate.set($any($event.target).value)"
+          class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="db-type" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Type <span class="font-normal text-neutral-400">(all)</span></label>
+        <app-search-select inputId="db-type" placeholder="All types" [multiple]="false" [options]="typeOptions"
+          [value]="selectedType()" (valueChange)="selectedType.set($event)" />
+      </div>
+      <div class="flex items-end">
+        <button type="button" (click)="generate()" [disabled]="loading()"
+          class="w-full rounded-lg bg-neutral-900 px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100">
+          {{ loading() ? 'Loading…' : 'Generate' }}
+        </button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ error() }}
+      </div>
+    }
+  </div>
+
+  <!-- Report sheet (this is what prints) -->
+  @if (loading()) {
+    <p class="py-16 text-center text-sm text-neutral-500">Generating day book…</p>
+  } @else if (report(); as r) {
+    <div class="print-area rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-10 dark:border-neutral-800 dark:bg-white dark:text-neutral-900">
+      <!-- Letterhead -->
+      <header class="mb-6 text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ r.companyName }}</h2>
+        <p class="mt-1 text-base font-semibold text-neutral-800">{{ r.title }}</p>
+        <p class="mt-0.5 text-sm font-medium text-neutral-600">
+          Date: {{ fmtDate(r.fromDate) }} to {{ fmtDate(r.toDate) }}
+        </p>
+      </header>
+
+      <table class="report-table w-full border-collapse text-sm">
+        <thead>
+          <tr class="border-y-2 border-neutral-700 text-left align-bottom">
+            <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Group</th>
+            <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Ledger</th>
+            <th scope="col" class="py-2 px-3 font-bold text-neutral-800">Short Narration</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Dr. Amount</th>
+            <th scope="col" class="py-2 pl-3 text-right font-bold text-neutral-800">Cr. Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (section of r.sections; track $index) {
+            <!-- Section heading -->
+            <tr>
+              <th scope="row" colspan="5" class="pt-4 pb-1 text-left font-bold text-neutral-800 italic">{{ section.sectionName }}</th>
+            </tr>
+
+            @for (voucher of section.vouchers; track $index) {
+              <!-- Voucher header -->
+              <tr class="border-t border-neutral-200">
+                <th scope="row" colspan="5" class="pt-3 pb-1 text-left font-semibold text-neutral-700">
+                  ID : {{ voucher.voucherId }} | Date : {{ fmtDate(voucher.date) }} | Type : {{ voucher.type }} | Reference : {{ voucher.reference }} | Cost Center : {{ voucher.costCenter }}
+                </th>
+              </tr>
+              @for (detail of voucher.details; track $index) {
+                <tr class="border-t border-neutral-200">
+                  <td class="py-2 pr-3 text-neutral-700">{{ detail.groupName }}</td>
+                  <td class="py-2 px-3 text-neutral-700">{{ detail.ledgerName }}</td>
+                  <td class="py-2 px-3 text-neutral-700">{{ detail.shortNarration }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ detail.debit | number:'1.2-2' }}</td>
+                  <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ detail.credit | number:'1.2-2' }}</td>
+                </tr>
+              }
+              <!-- Voucher sub total -->
+              <tr class="border-t border-neutral-300 font-bold text-neutral-900">
+                <td class="py-2 pr-3" colspan="3">Sub Total :</td>
+                <td class="py-2 pl-3 text-right tabular-nums">{{ voucher.subTotalDebit | number:'1.2-2' }}</td>
+                <td class="py-2 pl-3 text-right tabular-nums">{{ voucher.subTotalCredit | number:'1.2-2' }}</td>
+              </tr>
+              <!-- Voucher narration -->
+              <tr>
+                <td colspan="5" class="pt-1 pb-2 text-left text-neutral-600">Narration : {{ voucher.narration }}</td>
+              </tr>
+            } @empty {
+              <tr class="border-t border-neutral-200">
+                <td colspan="5" class="py-2 text-neutral-400">No vouchers.</td>
+              </tr>
+            }
+
+            <!-- Section summary -->
+            <tr class="border-t-2 border-neutral-300 font-bold text-neutral-900 italic">
+              <td class="py-2 pr-3" colspan="3">Summary for {{ section.sectionName }} :</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ section.summaryDebit | number:'1.2-2' }}</td>
+              <td class="py-2 pl-3 text-right tabular-nums">{{ section.summaryCredit | number:'1.2-2' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="py-6 text-center text-neutral-400">No data for the selected filters.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (hasRun()) {
+    <p class="py-16 text-center text-sm text-neutral-500">No data for the selected period.</p>
+  }
+</div>
