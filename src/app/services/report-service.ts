@@ -531,12 +531,16 @@ export class ReportService {
     const opening = openingRows
       .map(r => this.toLine(r, openingSubject))
       .filter((l): l is CashBookLine => l !== null);
-    const closing = this.toLine(
-      (this.pick(root, ['closing', 'closingBalance', 'closingCash', 'closingBank']) as Row) ??
-        rawRows.find(r => this.isSection(r, 'clos')) ??
-        null,
-      kind === 'cash' ? 'Cash' : 'Bank',
-    );
+    const closingSubject = kind === 'cash' ? 'Cash' : 'Bank';
+    const closingRaw = this.pick(root, ['closing', 'closingBalance', 'closingCash', 'closingBank']);
+    const closingRows = Array.isArray(closingRaw)
+      ? (closingRaw as Row[])
+      : closingRaw != null
+        ? [closingRaw as Row]
+        : rawRows.filter(r => this.isSection(r, 'clos'));
+    const closing = closingRows
+      .map(r => this.toLine(r, closingSubject))
+      .filter((l): l is CashBookLine => l !== null);
 
     const transactions = rawRows
       .filter(r => !this.isSection(r, 'open') && !this.isSection(r, 'clos'))
@@ -551,7 +555,7 @@ export class ReportService {
       opening.reduce((acc, l) => acc + l.receipt, 0) + subTotalReceipt;
     const grandTotalPayment =
       this.num(this.pick(root, ['grandTotalPayment', 'totalPayment'])) ??
-      subTotalPayment + (closing?.payment ?? 0);
+      subTotalPayment + closing.reduce((acc, l) => acc + l.payment, 0);
 
     return {
       companyName,

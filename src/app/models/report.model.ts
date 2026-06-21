@@ -28,8 +28,8 @@ export interface CashBookReport {
   opening: CashBookLine[];
   /** B. Receipt & Payment transaction lines. */
   transactions: CashBookLine[];
-  /** C. Closing balance row (Payment = closing cash/bank carried forward). */
-  closing: CashBookLine | null;
+  /** C. Closing balance rows (Payment = closing cash/bank carried forward). */
+  closing: CashBookLine[];
   /** Sum of the transaction receipts (Sub Total). */
   subTotalReceipt: number;
   /** Sum of the transaction payments (Sub Total). */

@@ -137,7 +137,7 @@
               <label for="form-type" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Type</label>
               <select id="form-type" formControlName="type"
                 (keydown.enter)="onFieldEnter($event, 'form-date')"
-                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:disabled:bg-neutral-900">
                 @for (t of types; track t.code) {
                   <option [value]="t.code">{{ t.label }}</option>
                 }

@@ -125,7 +125,7 @@
           <tr>
             <th scope="row" colspan="7" class="pt-4 pb-1 text-left font-bold text-neutral-800">{{ closingLabel() }}</th>
           </tr>
-          @if (r.closing; as c) {
+          @for (c of r.closing; track $index) {
             <tr class="border-t border-neutral-200">
               <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(c.date) }}</td>
               <td class="py-2 pr-3 text-neutral-700">{{ c.voucherId }}</td>
@@ -135,7 +135,7 @@
               <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ c.receipt | number:'1.2-2' }}</td>
               <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ c.payment | number:'1.2-2' }}</td>
             </tr>
-          } @else {
+          } @empty {
             <tr class="border-t border-neutral-200">
               <td colspan="7" class="py-2 text-neutral-400">No closing balance.</td>
             </tr>

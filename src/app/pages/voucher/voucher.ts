@@ -550,6 +550,7 @@ export class Voucher {
       { type, voucherDate: this.today(), reference: '', costCenter: '', narration: '' },
       { emitEvent: false },
     );
+    this.form.controls.type.enable({ emitEvent: false }); // type is editable on create
     this.openLine.set(null);
     this.showForm.set(true);
     this.applyType(type, true);
@@ -605,6 +606,7 @@ export class Voucher {
     // Apply option lists / lock state for the loaded type without resetting
     // rows (applyType calls refreshLines, which recomputes locks and totals).
     this.applyType(type, false);
+    this.form.controls.type.disable({ emitEvent: false }); // type is fixed on edit
     this.focusAfterRender('form-type');
   }
 

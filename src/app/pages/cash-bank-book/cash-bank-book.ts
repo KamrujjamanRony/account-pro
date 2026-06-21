@@ -35,7 +35,7 @@ export class CashBankBook {
   /** True once a report with at least one section is available to print. */
   protected readonly canPrint = computed(() => {
     const r = this.report();
-    return !!r && (r.opening.length > 0 || r.transactions.length > 0 || r.closing != null);
+    return !!r && (r.opening.length > 0 || r.transactions.length > 0 || r.closing.length > 0);
   });
 
   constructor() {
