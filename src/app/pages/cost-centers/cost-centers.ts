@@ -53,7 +53,9 @@ export class CostCenters {
   loadCostCenters() {
     this.loading.set(true);
     this.error.set('');
-    this.service.search({}).subscribe({
+    this.service.search({
+      "activeOnly": true
+    }).subscribe({
       next: items => {
         this.costCenters.set(items);
         this.loading.set(false);
