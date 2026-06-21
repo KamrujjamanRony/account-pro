@@ -2,6 +2,8 @@
 export interface Ledger {
   id?: number;
   groupId: number;
+  /** Chart-of-account code, e.g. "1-01-03-01.0001". */
+  code?: string | null;
   ledgerName: string;
   address?: string | null;
   phone?: string | null;

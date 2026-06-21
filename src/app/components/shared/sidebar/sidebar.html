@@ -16,31 +16,103 @@
   <!-- Navigation -->
   <nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
     <ul class="space-y-1">
-      @for (item of visibleNavItems(); track item.path; let i = $index) {
+      @for (item of visibleNavItems(); track item.label; let i = $index) {
         <li class="nav-item" [style.animation-delay.ms]="60 + i * 35">
-          <a
-            [routerLink]="item.path"
-            routerLinkActive="nav-active"
-            #rla="routerLinkActive"
-            [attr.aria-current]="rla.isActive ? 'page' : null"
-            [attr.title]="item.label"
-            class="nav-link group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
-          >
-            <span class="nav-indicator" aria-hidden="true"></span>
-            <svg
-              class="nav-icon h-5 w-5 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
+          @if (item.children) {
+            <!-- Collapsible group -->
+            <button
+              type="button"
+              (click)="toggleGroup(item.label)"
+              [attr.aria-expanded]="isGroupOpen(item)"
+              [attr.title]="item.label"
+              class="nav-link group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+              [class.nav-active]="isGroupActive(item)"
             >
-              <path [attr.d]="item.icon" />
-            </svg>
-            <span class="hidden truncate md:block">{{ item.label }}</span>
-          </a>
+              <span class="nav-indicator" aria-hidden="true"></span>
+              <svg
+                class="nav-icon h-5 w-5 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path [attr.d]="item.icon" />
+              </svg>
+              <span class="hidden truncate md:block">{{ item.label }}</span>
+              <svg
+                class="nav-chevron ml-auto hidden h-4 w-4 shrink-0 md:block"
+                [class.is-open]="isGroupOpen(item)"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            @if (isGroupOpen(item)) {
+              <ul class="submenu mt-1 space-y-1 md:pl-3">
+                @for (child of item.children; track child.path) {
+                  <li>
+                    <a
+                      [routerLink]="child.path"
+                      routerLinkActive="nav-active"
+                      #crla="routerLinkActive"
+                      [attr.aria-current]="crla.isActive ? 'page' : null"
+                      [attr.title]="child.label"
+                      class="nav-link nav-sublink group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+                    >
+                      <span class="nav-indicator" aria-hidden="true"></span>
+                      <svg
+                        class="nav-icon h-5 w-5 shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path [attr.d]="child.icon" />
+                      </svg>
+                      <span class="hidden truncate md:block">{{ child.label }}</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          } @else {
+            <!-- Leaf item -->
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="nav-active"
+              #rla="routerLinkActive"
+              [attr.aria-current]="rla.isActive ? 'page' : null"
+              [attr.title]="item.label"
+              class="nav-link group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
+            >
+              <span class="nav-indicator" aria-hidden="true"></span>
+              <svg
+                class="nav-icon h-5 w-5 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path [attr.d]="item.icon" />
+              </svg>
+              <span class="hidden truncate md:block">{{ item.label }}</span>
+            </a>
+          }
         </li>
       }
     </ul>

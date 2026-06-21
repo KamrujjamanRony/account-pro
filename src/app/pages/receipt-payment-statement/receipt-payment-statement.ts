@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
-import { ReceiptPaymentStatement } from '../../models/report.model';
+import { LedgerService } from '../../services/ledger-service';
+import { ReceiptPaymentStatement, RpsSection } from '../../models/report.model';
 
 @Component({
   selector: 'app-receipt-payment-statement',
@@ -11,6 +12,7 @@ import { ReceiptPaymentStatement } from '../../models/report.model';
 })
 export class ReceiptPaymentStatementPage {
   private service = inject(ReportService);
+  private ledgerService = inject(LedgerService);
 
   protected readonly fromDate = signal(this.startOfMonth());
   protected readonly toDate = signal(this.today());
@@ -20,10 +22,32 @@ export class ReceiptPaymentStatementPage {
   protected readonly error = signal('');
   protected readonly hasRun = signal(false);
 
-  /** Sections in print order, for a single @for in the template. */
-  protected readonly sections = computed(() => {
+  /**
+   * Map of ledger code → ledger name. The statement's opening/closing rows come
+   * back tagged by chart-of-account code (e.g. "1-01-03-01.0001"), so we resolve
+   * those to readable names here. Empty until the ledger list loads.
+   */
+  private readonly ledgerNames = signal<Map<string, string>>(new Map());
+
+  /**
+   * Sections in print order, with each line's ledger resolved to a readable name
+   * when the value is a known code. Drives a single @for in the template.
+   */
+  protected readonly sections = computed<RpsSection[]>(() => {
     const r = this.report();
-    return r ? [r.openingCashBank, r.receiptPayment, r.closingCashBank] : [];
+    if (!r) return [];
+    const names = this.ledgerNames();
+    const resolve = (section: RpsSection): RpsSection => ({
+      ...section,
+      groups: section.groups.map(group => ({
+        ...group,
+        lines: group.lines.map(line => ({
+          ...line,
+          ledger: names.get(line.ledger) ?? line.ledger,
+        })),
+      })),
+    });
+    return [r.openingCashBank, r.receiptPayment, r.closingCashBank].map(resolve);
   });
 
   /** True once a report with at least one populated section is available to print. */
@@ -32,7 +56,23 @@ export class ReceiptPaymentStatementPage {
   );
 
   constructor() {
+    this.loadLedgerNames();
     this.generate();
+  }
+
+  private loadLedgerNames() {
+    this.ledgerService.search().subscribe({
+      next: result => {
+        const map = new Map<string, string>();
+        for (const ledger of result.items) {
+          if (ledger.code) map.set(ledger.code, ledger.ledgerName);
+        }
+        this.ledgerNames.set(map);
+      },
+      error: () => {
+        // Leave the map empty; lines fall back to showing their raw code.
+      },
+    });
   }
 
   generate() {

@@ -1,14 +1,19 @@
-import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { AuthService } from '../../../services/auth-service';
 import { PermissionService } from '../../../services/permission-service';
 import { environment } from '../../../../environments/environment';
 
 interface NavItem {
   label: string;
-  path: string;
+  /** Route for a leaf item. Omitted for group (parent) items. */
+  path?: string;
   /** SVG path data for the item icon. */
   icon: string;
+  /** Child items for a collapsible group. */
+  children?: NavItem[];
 }
 
 @Component({
@@ -20,14 +25,67 @@ interface NavItem {
 export class Sidebar {
   private auth = inject(AuthService);
   private permissions = inject(PermissionService);
+  private router = inject(Router);
 
   protected readonly companyName = environment.companyName;
   protected readonly user = this.auth.currentUser;
 
-  /** Nav items the signed-in user is allowed to view (label == menu name). */
-  protected readonly visibleNavItems = computed(() =>
-    this.navItems.filter(item => this.permissions.canView(item.label)),
+  /** Current URL, kept in sync with navigation so groups can auto-expand. */
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
   );
+
+  /** Labels of groups the user has expanded. */
+  private readonly openGroups = signal<ReadonlySet<string>>(new Set());
+
+  constructor() {
+    // Auto-expand the group that owns the active route on every navigation.
+    effect(() => {
+      const url = this.currentUrl();
+      const active = this.navItems.find(item => this.isChildActive(item, url));
+      if (active && !this.openGroups().has(active.label)) {
+        this.openGroups.update(set => new Set(set).add(active.label));
+      }
+    });
+  }
+
+  /** Nav items the signed-in user is allowed to view (label == menu name). */
+  protected readonly visibleNavItems = computed<NavItem[]>(() =>
+    this.navItems
+      .map(item => {
+        if (item.children) {
+          const children = item.children.filter(child => this.permissions.canView(child.label));
+          return children.length ? { ...item, children } : null;
+        }
+        return this.permissions.canView(item.label) ? item : null;
+      })
+      .filter((item): item is NavItem => item !== null),
+  );
+
+  protected isGroupOpen(group: NavItem): boolean {
+    return this.openGroups().has(group.label);
+  }
+
+  /** True when any child route of `group` matches the current URL. */
+  protected isGroupActive(group: NavItem): boolean {
+    return this.isChildActive(group, this.currentUrl());
+  }
+
+  private isChildActive(item: NavItem, url: string): boolean {
+    return (item.children ?? []).some(child => !!child.path && url.startsWith(child.path));
+  }
+
+  protected toggleGroup(label: string) {
+    this.openGroups.update(set => {
+      const next = new Set(set);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
 
   protected readonly navItems: NavItem[] = [
     {
@@ -51,34 +109,40 @@ export class Sidebar {
       icon: 'M9 2h6a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-3 2V4a2 2 0 0 1 2-2Zm0 6h6M9 12h6',
     },
     {
-      label: 'Cash Book',
-      path: '/cash-book',
-      icon: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm0 4h18M7 15h4',
-    },
-    {
-      label: 'Bank Book',
-      path: '/bank-book',
-      icon: 'M3 21h18M5 21V10m4 11V10m6 11V10m4 11V10M2 10l10-6 10 6H2Z',
-    },
-    {
-      label: 'Receipt & Payment',
-      path: '/receipt-payment-statement',
-      icon: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 5h10M7 13h10M7 17h6',
-    },
-    {
-      label: 'General Ledger',
-      path: '/general-ledger',
-      icon: 'M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm4 0v14M8 9h8M8 13h6',
-    },
-    {
-      label: 'Trial Balance',
-      path: '/trial-balance',
-      icon: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M9 3h6M8 12h3m2 0h3M8 16h3m2 0h3',
-    },
-    {
-      label: 'Balance Sheet',
-      path: '/balance-sheet',
-      icon: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 6h16M12 10v10',
+      label: 'Report',
+      icon: 'M9 17v-5m3 5v-8m3 8v-3M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z',
+      children: [
+        {
+          label: 'Cash Book',
+          path: '/cash-book',
+          icon: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm0 4h18M7 15h4',
+        },
+        {
+          label: 'Bank Book',
+          path: '/bank-book',
+          icon: 'M3 21h18M5 21V10m4 11V10m6 11V10m4 11V10M2 10l10-6 10 6H2Z',
+        },
+        {
+          label: 'Receipt & Payment',
+          path: '/receipt-payment-statement',
+          icon: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 5h10M7 13h10M7 17h6',
+        },
+        {
+          label: 'General Ledger',
+          path: '/general-ledger',
+          icon: 'M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm4 0v14M8 9h8M8 13h6',
+        },
+        {
+          label: 'Trial Balance',
+          path: '/trial-balance',
+          icon: 'M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-4M9 3v4h6V3M9 3h6M8 12h3m2 0h3M8 16h3m2 0h3',
+        },
+        {
+          label: 'Balance Sheet',
+          path: '/balance-sheet',
+          icon: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 6h16M12 10v10',
+        },
+      ],
     },
     {
       label: 'User',
