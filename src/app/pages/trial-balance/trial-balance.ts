@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
-import { TrialBalanceReport } from '../../models/report.model';
+import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
+import { TrialBalanceReport, TrialBalanceTotals } from '../../models/report.model';
 
 @Component({
   selector: 'app-trial-balance',
@@ -11,6 +12,7 @@ import { TrialBalanceReport } from '../../models/report.model';
 })
 export class TrialBalance {
   private service = inject(ReportService);
+  private excel = inject(ExcelExportService);
 
   protected readonly fromDate = signal(this.startOfMonth());
   protected readonly toDate = signal(this.today());
@@ -56,6 +58,38 @@ export class TrialBalance {
 
   print() {
     if (this.canPrint()) window.print();
+  }
+
+  /** Export the current report to an .xlsx file mirroring the printed layout. */
+  exportExcel() {
+    const r = this.report();
+    if (!r || !this.canPrint()) return;
+
+    const cols = (t: TrialBalanceTotals): ExcelCell[] => [
+      t.opening.debit, t.opening.credit, t.period.debit, t.period.credit, t.closing.debit, t.closing.credit,
+    ];
+
+    const rows: ExcelCell[][] = [
+      [r.companyName],
+      [r.title],
+      [`Date: ${this.fmtDate(r.fromDate)} to ${this.fmtDate(r.toDate)}`],
+      [],
+      ['', 'Opening Balance', '', 'Current Balance', '', 'Closing Balance', ''],
+      ['Ledger', 'Debit', 'Credit', 'Debit', 'Credit', 'Debit', 'Credit'],
+    ];
+
+    for (const section of r.sections) {
+      rows.push([section.nature]);
+      for (const group of section.groups) {
+        rows.push([group.groupName]);
+        for (const l of group.lines) rows.push([l.ledgerName, ...cols(l)]);
+        rows.push(['Sub Total :', ...cols(group.subTotal)]);
+      }
+      rows.push([`Summary for ${section.nature} :`, ...cols(section.total)]);
+    }
+    rows.push(['Grand Total :', ...cols(r.grandTotal)]);
+
+    this.excel.download(`${r.title} ${r.fromDate} to ${r.toDate}`, rows, 'Trial Balance');
   }
 
   /**

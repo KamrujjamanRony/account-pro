@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
 import { LedgerService } from '../../services/ledger-service';
+import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { ReceiptPaymentStatement, RpsSection } from '../../models/report.model';
 
 @Component({
@@ -13,6 +14,7 @@ import { ReceiptPaymentStatement, RpsSection } from '../../models/report.model';
 export class ReceiptPaymentStatementPage {
   private service = inject(ReportService);
   private ledgerService = inject(LedgerService);
+  private excel = inject(ExcelExportService);
 
   protected readonly fromDate = signal(this.startOfMonth());
   protected readonly toDate = signal(this.today());
@@ -101,6 +103,35 @@ export class ReceiptPaymentStatementPage {
 
   print() {
     if (this.canPrint()) window.print();
+  }
+
+  /** Export the current report to an .xlsx file mirroring the printed layout. */
+  exportExcel() {
+    const r = this.report();
+    if (!r || !this.canPrint()) return;
+
+    const rows: ExcelCell[][] = [
+      [r.companyName],
+      [r.title],
+      [`Date: ${this.fmtDate(r.fromDate)} to ${this.fmtDate(r.toDate)}${r.option ? ` | Option: ${r.option}` : ''}`],
+      [],
+      ['Ledger', 'Receipt', 'Payment'],
+    ];
+
+    for (const section of this.sections()) {
+      rows.push([section.sectionTitle]);
+      for (const group of section.groups) {
+        rows.push([group.groupName]);
+        for (const l of group.lines) rows.push([l.ledger, l.receipt, l.payment]);
+        if (group.lines.length > 1) {
+          rows.push(['Sub Total :', group.subTotalReceipt, group.subTotalPayment]);
+        }
+      }
+      rows.push([`Summary for ${section.sectionTitle} :`, section.summaryReceipt, section.summaryPayment]);
+    }
+    rows.push(['Grand Total :', r.grandTotalReceipt, r.grandTotalPayment]);
+
+    this.excel.download(`${r.title} ${r.fromDate} to ${r.toDate}`, rows, 'Receipt & Payment');
   }
 
   /**

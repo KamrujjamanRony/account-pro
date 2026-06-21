@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
+import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { BalanceSheetLevel, BalanceSheetReport } from '../../models/report.model';
 
 @Component({
@@ -11,6 +12,7 @@ import { BalanceSheetLevel, BalanceSheetReport } from '../../models/report.model
 })
 export class BalanceSheet {
   private service = inject(ReportService);
+  private excel = inject(ExcelExportService);
 
   protected readonly asOfDate = signal(this.today());
   protected readonly fiscalYearStart = signal(this.startOfYear());
@@ -78,6 +80,42 @@ export class BalanceSheet {
 
   print() {
     if (this.canPrint()) window.print();
+  }
+
+  /** Export the current report to an .xlsx file mirroring the printed layout. */
+  exportExcel() {
+    const r = this.report();
+    if (!r || !this.canPrint()) return;
+
+    const showLedgers = this.showLedgers();
+    const rows: ExcelCell[][] = [
+      [r.companyName],
+      [r.title],
+      [`As on Date: ${this.fmtDate(r.asOfDate)} | Level: ${this.levelLabel()}`],
+      [],
+      ['Group', 'Amount'],
+    ];
+
+    for (const side of this.sides()) {
+      rows.push([side.title]);
+      for (const section of side.sections) {
+        if (section.sectionName && section.sectionName !== side.title) {
+          rows.push([section.sectionName]);
+        }
+        for (const group of section.groups) {
+          rows.push([group.groupName, group.amount]);
+          if (showLedgers) {
+            for (const ledger of group.ledgers) rows.push([`    ${ledger.name}`, ledger.amount]);
+          }
+        }
+        if (side.sections.length > 1) rows.push(['Sub Total :', section.subTotal]);
+      }
+      rows.push([`Summary for ${side.title} :`, side.summary]);
+    }
+    rows.push([]);
+    rows.push(r.isBalanced ? ['Balanced.'] : ['Out of balance — Difference :', r.difference]);
+
+    this.excel.download(`${r.title} as on ${r.asOfDate}`, rows, 'Balance Sheet');
   }
 
   /**

@@ -2,7 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ReportService } from '../../services/report-service';
-import { BookKind, CashBookReport } from '../../models/report.model';
+import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
+import { BookKind, CashBookLine, CashBookReport } from '../../models/report.model';
 
 @Component({
   selector: 'app-cash-bank-book',
@@ -13,6 +14,7 @@ import { BookKind, CashBookReport } from '../../models/report.model';
 export class CashBankBook {
   private route = inject(ActivatedRoute);
   private service = inject(ReportService);
+  private excel = inject(ExcelExportService);
 
   /** 'cash' | 'bank' — supplied via route data, drives endpoint and labels. */
   protected readonly kind = signal<BookKind>(
@@ -69,6 +71,34 @@ export class CashBankBook {
 
   print() {
     if (this.canPrint()) window.print();
+  }
+
+  /** Export the current report to an .xlsx file mirroring the printed layout. */
+  exportExcel() {
+    const r = this.report();
+    if (!r || !this.canPrint()) return;
+
+    const line = (l: CashBookLine): ExcelCell[] => [
+      this.fmtDate(l.date), l.voucherId, l.reference, l.ledger, l.narration, l.receipt, l.payment,
+    ];
+
+    const rows: ExcelCell[][] = [
+      [r.companyName],
+      [this.title()],
+      [`Date: ${this.fmtDate(r.fromDate)} to ${this.fmtDate(r.toDate)}`],
+      [],
+      ['Date', 'ID', 'Reference', 'Ledger', 'Narration', 'Receipt', 'Payment'],
+      [this.openingLabel()],
+      ...r.opening.map(line),
+      ['B. Receipt & Payment'],
+      ...r.transactions.map(line),
+      ['Sub Total :', '', '', '', '', r.subTotalReceipt, r.subTotalPayment],
+      [this.closingLabel()],
+      ...r.closing.map(line),
+      ['Grand Total :', '', '', '', '', r.grandTotalReceipt, r.grandTotalPayment],
+    ];
+
+    this.excel.download(`${this.title()} ${r.fromDate} to ${r.toDate}`, rows, this.title());
   }
 
   /**
