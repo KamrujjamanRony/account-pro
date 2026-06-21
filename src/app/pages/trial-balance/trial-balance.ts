@@ -1,21 +1,34 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
+import { ChartOfAccountService } from '../../services/chart-of-account-service';
+import { LedgerService } from '../../services/ledger-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { TrialBalanceReport, TrialBalanceTotals } from '../../models/report.model';
+import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
 
 @Component({
   selector: 'app-trial-balance',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, SearchSelect],
   templateUrl: './trial-balance.html',
   styleUrl: './trial-balance.css',
 })
 export class TrialBalance {
   private service = inject(ReportService);
+  private accountService = inject(ChartOfAccountService);
+  private ledgerService = inject(LedgerService);
   private excel = inject(ExcelExportService);
 
   protected readonly fromDate = signal(this.startOfMonth());
   protected readonly toDate = signal(this.today());
+
+  /** Filter selections; empty means "all". Group & ledger are single-select. */
+  protected readonly selectedGroups = signal<string[]>([]);
+  protected readonly selectedLedgers = signal<string[]>([]);
+
+  /** Dropdown option lists. */
+  protected readonly groupOptions = signal<SelectOption[]>([]);
+  protected readonly ledgerOptions = signal<SelectOption[]>([]);
 
   protected readonly report = signal<TrialBalanceReport | null>(null);
   protected readonly loading = signal(false);
@@ -29,7 +42,21 @@ export class TrialBalance {
   });
 
   constructor() {
+    this.loadFilterOptions();
     this.generate();
+  }
+
+  private loadFilterOptions() {
+    this.accountService.search({ onlyLeaf: true }).subscribe({
+      next: groups =>
+        this.groupOptions.set((groups ?? []).map(g => ({ value: g.name, label: g.name }))),
+      error: () => {},
+    });
+    this.ledgerService.searchList({ withoutCashAtBankAndCashInHand: false }).subscribe({
+      next: result =>
+        this.ledgerOptions.set(result.items.map(l => ({ value: l.ledgerName, label: l.ledgerName }))),
+      error: () => {},
+    });
   }
 
   generate() {
@@ -40,7 +67,12 @@ export class TrialBalance {
     this.loading.set(true);
     this.error.set('');
     this.service
-      .trialBalance({ fromDate: this.fromDate(), toDate: this.toDate() })
+      .trialBalance({
+        fromDate: this.fromDate(),
+        toDate: this.toDate(),
+        groupName: this.selectedGroups()[0] ?? null,
+        ledger: this.selectedLedgers()[0] ?? null,
+      })
       .subscribe({
         next: report => {
           this.report.set(report);

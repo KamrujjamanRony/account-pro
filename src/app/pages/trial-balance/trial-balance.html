@@ -35,7 +35,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-[1fr_1fr_auto] dark:border-neutral-800 dark:bg-neutral-900">
+    <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-900">
       <div>
         <label for="r-from" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">From date</label>
         <input id="r-from" type="date" [value]="fromDate()" (change)="fromDate.set($any($event.target).value)"
@@ -45,6 +45,16 @@
         <label for="r-to" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">To date</label>
         <input id="r-to" type="date" [value]="toDate()" (change)="toDate.set($any($event.target).value)"
           class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+      </div>
+      <div>
+        <label for="r-group" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Group <span class="font-normal text-neutral-400">(all)</span></label>
+        <app-search-select inputId="r-group" placeholder="All groups" [multiple]="false" [options]="groupOptions()"
+          [value]="selectedGroups()" (valueChange)="selectedGroups.set($event)" />
+      </div>
+      <div>
+        <label for="r-ledger" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Ledger <span class="font-normal text-neutral-400">(all)</span></label>
+        <app-search-select inputId="r-ledger" placeholder="All ledgers" [multiple]="false" [options]="ledgerOptions()"
+          [value]="selectedLedgers()" (valueChange)="selectedLedgers.set($event)" />
       </div>
       <div class="flex items-end">
         <button type="button" (click)="generate()" [disabled]="loading()"
