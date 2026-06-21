@@ -15,7 +15,9 @@ import {
 import { Ledger } from '../../models/ledger.model';
 import { CostCenter } from '../../models/cost-center.model';
 import { VoucherService } from '../../services/voucher-service';
+import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { CanDirective } from '../../directives/can.directive';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-voucher',
@@ -36,8 +38,12 @@ export class Voucher {
   private alert = inject(AlertService);
   private cdr = inject(ChangeDetectorRef);
   private document = inject(DOCUMENT);
+  private excel = inject(ExcelExportService);
 
   protected readonly types = VOUCHER_TYPES;
+
+  /** Company name shown on the printed voucher letterhead. */
+  protected readonly companyName = environment.companyName;
 
   protected readonly vouchers = signal<VoucherModel[]>([]);
   protected readonly ledgers = signal<Ledger[]>([]);
@@ -68,6 +74,9 @@ export class Voucher {
   protected readonly viewTotalCredit = computed(() =>
     (this.viewing()?.details ?? []).reduce((sum, d) => sum + (Number(d.credit) || 0), 0),
   );
+
+  /** The voucher total spelled out for the printed "In Word" line. */
+  protected readonly amountInWords = computed(() => this.numberToWords(this.viewTotalDebit()));
 
   // ---- per-row ledger combobox ----
   protected readonly openLine = signal<number | null>(null);
@@ -665,6 +674,108 @@ export class Voucher {
   /** Resolve a detail line's ledger name, preferring the API-supplied label. */
   detailLedgerName(detail: { ledgerId: number; ledgerName?: string | null }): string {
     return detail.ledgerName ?? this.ledgerName(detail.ledgerId);
+  }
+
+  /** Print the open voucher (A5). The `.voucher-print` sheet is the only thing
+   *  the print stylesheet leaves visible; the modal chrome is hidden. */
+  printVoucher() {
+    if (this.viewing() && !this.loadingView()) window.print();
+  }
+
+  /** Download the open voucher as an .xlsx mirroring the printed layout. */
+  exportVoucherExcel() {
+    const v = this.viewing();
+    if (!v || this.loadingView()) return;
+
+    const rows: ExcelCell[][] = [
+      [this.companyName],
+      [`${this.typeLabel(v.type)} (${v.type})`],
+      [],
+      ['Voucher No', v.voucherNo || `#${v.id}`, '', 'Date', this.fmtDate(v.voucherDate)],
+      ['Reference', v.reference || 'N/A', '', 'Cost Center', this.costCenterName(v.costCenter) || ''],
+      [],
+      ['Ledger', 'Dr. Amount', 'Cr. Amount'],
+    ];
+    for (const d of v.details ?? []) {
+      rows.push([this.detailLedgerName(d), Number(d.debit) || 0, Number(d.credit) || 0]);
+    }
+    rows.push(['Total :', this.viewTotalDebit(), this.viewTotalCredit()]);
+    rows.push([]);
+    rows.push([`In Word : ${this.amountInWords()}`]);
+    rows.push([`Narration : ${v.narration || ''}`]);
+
+    const name = v.voucherNo || `voucher-${v.id}`;
+    this.excel.download(name, rows, 'Voucher');
+  }
+
+  /** Format a date as dd/MM/yyyy; unparseable values are returned unchanged. */
+  fmtDate(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${date.getFullYear()}`;
+  }
+
+  /** "21/06/2026 12:45 PM" — when the document was printed. */
+  printedOn(): string {
+    const now = new Date();
+    let h = now.getHours();
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${this.fmtDate(now.toISOString())} ${String(h).padStart(2, '0')}:${m} ${ampm}`;
+  }
+
+  /** Spell out a money amount, e.g. 2000 → "Two Thousand Only". */
+  private numberToWords(value: number): string {
+    const amount = Math.round((Number(value) || 0) * 100) / 100;
+    const whole = Math.floor(amount);
+    const paisa = Math.round((amount - whole) * 100);
+
+    const words = whole === 0 ? 'Zero' : this.wholeToWords(whole);
+    const paisaPart = paisa > 0 ? ` And ${this.wholeToWords(paisa)} Paisa` : '';
+    return `${words}${paisaPart} Only`;
+  }
+
+  private wholeToWords(num: number): string {
+    const ones = [
+      '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+      'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+      'Seventeen', 'Eighteen', 'Nineteen',
+    ];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const underThousand = (n: number): string => {
+      let out = '';
+      if (n >= 100) {
+        out += ones[Math.floor(n / 100)] + ' Hundred';
+        n %= 100;
+        if (n) out += ' ';
+      }
+      if (n >= 20) {
+        out += tens[Math.floor(n / 10)];
+        if (n % 10) out += ' ' + ones[n % 10];
+      } else if (n > 0) {
+        out += ones[n];
+      }
+      return out;
+    };
+
+    const scales = ['', ' Thousand', ' Million', ' Billion', ' Trillion'];
+    let n = num;
+    const groups: number[] = [];
+    while (n > 0) {
+      groups.push(n % 1000);
+      n = Math.floor(n / 1000);
+    }
+    const parts: string[] = [];
+    for (let i = groups.length - 1; i >= 0; i--) {
+      if (groups[i] === 0) continue;
+      parts.push(underThousand(groups[i]) + scales[i]);
+    }
+    return parts.join(' ').trim();
   }
 
   save() {

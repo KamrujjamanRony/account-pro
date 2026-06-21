@@ -1,0 +1,26 @@
+/*
+  Voucher print sheet. On screen the `.voucher-print` block is hidden (Tailwind
+  `hidden`); only when printing do we reveal it. The global print rules in
+  styles.css already drop the app shell and the modal chrome (everything outside
+  `.print-area`), so here we just un-hide the sheet and size the page to A5.
+*/
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 12mm;
+  }
+
+  .voucher-print {
+    display: block !important;
+    color: #000 !important;
+  }
+
+  /* Repeat the ledger table header if the voucher spills onto a second page. */
+  .voucher-print thead {
+    display: table-header-group;
+  }
+
+  .voucher-print tr {
+    break-inside: avoid;
+  }
+}
