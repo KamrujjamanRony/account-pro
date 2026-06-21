@@ -42,8 +42,9 @@ export class Voucher {
 
   protected readonly types = VOUCHER_TYPES;
 
-  /** Company name shown on the printed voucher letterhead. */
+  /** Company name & address shown on the printed voucher letterhead. */
   protected readonly companyName = environment.companyName;
+  protected readonly companyAddress = environment.companyAddress;
 
   protected readonly vouchers = signal<VoucherModel[]>([]);
   protected readonly ledgers = signal<Ledger[]>([]);
@@ -716,16 +717,6 @@ export class Voucher {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${day}/${month}/${date.getFullYear()}`;
-  }
-
-  /** "21/06/2026 12:45 PM" — when the document was printed. */
-  printedOn(): string {
-    const now = new Date();
-    let h = now.getHours();
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${this.fmtDate(now.toISOString())} ${String(h).padStart(2, '0')}:${m} ${ampm}`;
   }
 
   /** Spell out a money amount, e.g. 2000 → "Two Thousand Only". */

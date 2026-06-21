@@ -1,6 +1,7 @@
 export const environment = {
   production: false,
   companyName: 'Account Pro',
+  companyAddress: 'Dhaka, Bangladesh',
   companyCode: 1,
   apiUrl: 'http://localhost:1000/p',
   ImageApi: 'https://accountapi.amanstall.com/uploads/',
