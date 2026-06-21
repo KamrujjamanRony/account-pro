@@ -23,6 +23,8 @@ export interface LedgerSearchQuery {
   groupId?: number | null;
   search?: string | null;
   withOpeningOnly?: boolean;
+  /** Exclude "Cash at Bank" and "Cash in Hand" ledgers from the result. */
+  withoutCashAtBankAndCashInHand?: boolean;
 }
 
 /** Search payload for ledgers, including opening-balance totals. */

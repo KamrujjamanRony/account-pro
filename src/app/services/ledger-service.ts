@@ -24,6 +24,25 @@ export class LedgerService {
       );
   }
 
+  /** Flat ledger list for pickers; supports the cash/bank exclusion flag. */
+  searchList(query: LedgerSearchQuery = {}): Observable<LedgerSearchResult> {
+    type Data = Ledger[] | (PagedResult<Ledger> & Partial<LedgerSearchResult>);
+    return this.http
+      .post<ApiResponse<Data>>(`${this.baseUrl}/SearchList`, query)
+      .pipe(
+        map(res => {
+          const data = res.data;
+          const items = Array.isArray(data) ? data : data?.items ?? [];
+          return {
+            items,
+            count: Array.isArray(data) ? items.length : data?.count ?? items.length,
+            totalDrOpeningBalance: Array.isArray(data) ? 0 : data?.totalDrOpeningBalance ?? 0,
+            totalCrOpeningBalance: Array.isArray(data) ? 0 : data?.totalCrOpeningBalance ?? 0,
+          };
+        }),
+      );
+  }
+
   add(ledger: Ledger): Observable<Ledger> {
     return this.http
       .post<ApiResponse<Ledger>>(this.baseUrl, ledger)

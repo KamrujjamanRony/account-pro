@@ -197,6 +197,8 @@ export class Voucher {
    */
   private applyType(type: string, reset: boolean) {
     this.voucherType.set(type);
+    // The general ledger list depends on the type (JV includes cash & bank).
+    this.loadLedgers(type);
     const behavior = this.typeBehavior();
 
     if (reset) {
@@ -289,11 +291,18 @@ export class Voucher {
       });
   }
 
-  private loadLedgers() {
-    this.ledgerService.search({}).subscribe({
-      next: result => this.ledgers.set(result.items),
-      error: () => {},
-    });
+  /**
+   * Load the general ledger list for the entry pickers. Receipt/payment/contra
+   * vouchers (CR, CP, BR, BP) exclude cash & bank ledgers — those come from the
+   * dedicated first row — while Journal Vouchers (JV) include every ledger.
+   */
+  private loadLedgers(type: string = this.voucherType()) {
+    this.ledgerService
+      .searchList({ withoutCashAtBankAndCashInHand: type !== 'JV' })
+      .subscribe({
+        next: result => this.ledgers.set(result.items),
+        error: () => {},
+      });
   }
 
   private loadCostCenters() {
