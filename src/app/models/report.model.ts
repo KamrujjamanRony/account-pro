@@ -238,10 +238,10 @@ export interface GeneralLedgerReport {
 
 /** Filter query for the General Ledger endpoint. */
 export interface GeneralLedgerQuery extends ReportDateQuery {
-  /** Optional group filter; null = all groups. */
-  groupName?: string | null;
-  /** Optional ledger filter; null = all ledgers. */
-  ledger?: string | null;
+  /** Optional group filter by id; null/empty = all groups. */
+  groupName?: number[] | null;
+  /** Optional ledger filter by id; null/empty = all ledgers. */
+  ledger?: number[] | null;
   /** Optional cost-center filter; null = all cost centers. */
   costCenter?: string | null;
 }

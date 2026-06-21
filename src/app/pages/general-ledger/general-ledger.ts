@@ -54,14 +54,18 @@ export class GeneralLedger {
     this.accountService.search({ onlyLeaf: true }).subscribe({
       next: groups =>
         this.groupOptions.set(
-          (groups ?? []).map(g => ({ value: g.name, label: g.name })),
+          (groups ?? [])
+            .filter(g => g.id != null)
+            .map(g => ({ value: String(g.id), label: g.name })),
         ),
       error: () => {},
     });
     this.ledgerService.searchList({ withoutCashAtBankAndCashInHand: false }).subscribe({
       next: result =>
         this.ledgerOptions.set(
-          result.items.map(l => ({ value: l.ledgerName, label: l.ledgerName })),
+          result.items
+            .filter(l => l.id != null)
+            .map(l => ({ value: String(l.id), label: l.ledgerName })),
         ),
       error: () => {},
     });
@@ -83,8 +87,8 @@ export class GeneralLedger {
       .generalLedger({
         fromDate: this.fromDate(),
         toDate: this.toDate(),
-        groupName: this.selectedGroups().join(',') || null,
-        ledger: this.selectedLedgers().join(',') || null,
+        groupName: this.toIds(this.selectedGroups()),
+        ledger: this.toIds(this.selectedLedgers()),
         costCenter: this.selectedCostCenter()[0] ?? null,
       })
       .subscribe({
@@ -100,6 +104,12 @@ export class GeneralLedger {
           this.hasRun.set(true);
         },
       });
+  }
+
+  /** Selection values are id strings; convert to a numeric array (null when empty). */
+  private toIds(values: string[]): number[] | null {
+    const ids = values.map(Number).filter(n => !Number.isNaN(n));
+    return ids.length ? ids : null;
   }
 
   print() {
