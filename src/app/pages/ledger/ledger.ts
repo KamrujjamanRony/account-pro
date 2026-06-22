@@ -114,16 +114,18 @@ export class Ledger {
   loadLedgers() {
     this.loading.set(true);
     this.error.set('');
-    this.service.search({}).subscribe({
-      next: result => {
-        this.ledgers.set(result.items);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load ledgers.');
-        this.loading.set(false);
-      },
-    });
+    this.service
+      .searchList({ id: null, groupId: null, search: null, withoutCashAtBankAndCashInHand: false })
+      .subscribe({
+        next: result => {
+          this.ledgers.set(result.items);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load ledgers.');
+          this.loading.set(false);
+        },
+      });
   }
 
   private loadGroups() {
