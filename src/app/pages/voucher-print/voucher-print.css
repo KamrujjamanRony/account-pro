@@ -12,7 +12,8 @@
 @media print {
   @page {
     size: A5 portrait;
-    margin: 12mm;
+    /* Top gap driven by the report header's `marginTop`; sides & bottom fixed. */
+    margin: 0 12mm 12mm;
   }
 
   :host {

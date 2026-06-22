@@ -104,7 +104,10 @@ router-outlet + * {
     width: 100%;
   }
 
+  /* Side & bottom print margins only — the top gap is driven entirely by the
+     report header's `marginTop` (from company-profile.json), so a marginTop of
+     0 prints flush to the top printable area. */
   @page {
-    margin: 16mm;
+    margin: 0 16mm 16mm;
   }
 }

@@ -9,11 +9,12 @@ import { ExcelCell, ExcelExportService } from '../../services/excel-export-servi
 import { Voucher as VoucherModel, VOUCHER_TYPES } from '../../models/voucher.model';
 import { Ledger } from '../../models/ledger.model';
 import { CostCenter } from '../../models/cost-center.model';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-voucher-print',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ReportHeader],
   templateUrl: './voucher-print.html',
   styleUrl: './voucher-print.css',
 })

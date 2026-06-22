@@ -57,15 +57,7 @@
   } @else if (voucher(); as v) {
     <div class="print-area voucher-sheet rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-10 dark:border-neutral-800 dark:bg-white dark:text-neutral-900">
       <!-- Letterhead -->
-      <header class="text-center">
-        <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ companyName }}</h2>
-        <p class="mt-0.5 text-xs text-neutral-600">{{ companyAddress }}</p>
-      </header>
-
-      <!-- Voucher type -->
-      <h3 class="mt-4 text-center text-sm font-bold uppercase tracking-[0.2em] text-neutral-800">
-        {{ typeLabel(v.type) }}
-      </h3>
+      <app-report-header [title]="typeLabel(v.type)" />
 
       <!-- Meta -->
       <div class="mt-4 flex justify-between border-t border-b border-neutral-300 py-2 text-xs text-neutral-800">

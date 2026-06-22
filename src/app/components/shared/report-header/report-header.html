@@ -1,31 +1,26 @@
-<header class="report-letterhead" [style.marginTop.mm]="marginTop()">
-  @if (monogram()) {
-    <span class="monogram" aria-hidden="true">{{ monogram() }}</span>
-  }
+@if (profile().name || title()) {
+  <header class="report-letterhead" [style.marginTop.mm]="marginTop()">
+    @if (profile().name) {
+      <div class="org-block">
+        <h2 class="org-name">{{ profile().name }}</h2>
+        @if (profile().address) {
+          <p class="org-meta">{{ profile().address }}</p>
+        }
+        @if (profile().contact) {
+          <p class="org-meta org-contact">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.74-1.27a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92Z" />
+            </svg>
+            <span>Contact: {{ profile().contact }}</span>
+          </p>
+        }
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+    }
 
-  <h2 class="org-name">{{ profile().name }}</h2>
-
-  @if (profile().address) {
-    <p class="org-meta">{{ profile().address }}</p>
-  }
-  @if (profile().contact) {
-    <p class="org-meta org-contact">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.74-1.27a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92Z" />
-      </svg>
-      <span>{{ profile().contact }}</span>
-    </p>
-  }
-
-  <span class="rule" aria-hidden="true"></span>
-
-  <div class="title-row">
-    <span class="title-line" aria-hidden="true"></span>
-    <h3 class="report-title">{{ title() }}</h3>
-    <span class="title-line" aria-hidden="true"></span>
-  </div>
-
-  <p class="report-meta">
-    <ng-content />
-  </p>
-</header>
+    @if (title()) {
+      <h3 class="report-title">{{ title() }}</h3>
+    }
+    <p class="report-meta"><ng-content /></p>
+  </header>
+}
