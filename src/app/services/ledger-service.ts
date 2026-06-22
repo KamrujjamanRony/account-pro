@@ -24,6 +24,20 @@ export class LedgerService {
       );
   }
 
+  /** Ledgers filtered by opening-balance presence; drives the ledger page tabs. */
+  searchOpening(query: LedgerSearchQuery = {}): Observable<LedgerSearchResult> {
+    return this.http
+      .post<ApiResponse<PagedResult<Ledger> & Partial<LedgerSearchResult>>>(`${this.baseUrl}/SearchOpening`, query)
+      .pipe(
+        map(res => ({
+          items: res.data?.items ?? [],
+          count: res.data?.count ?? res.data?.items?.length ?? 0,
+          totalDrOpeningBalance: res.data?.totalDrOpeningBalance ?? 0,
+          totalCrOpeningBalance: res.data?.totalCrOpeningBalance ?? 0,
+        })),
+      );
+  }
+
   /** Flat ledger list for pickers; supports the cash/bank exclusion flag. */
   searchList(query: LedgerSearchQuery = {}): Observable<LedgerSearchResult> {
     type Data = Ledger[] | (PagedResult<Ledger> & Partial<LedgerSearchResult>);

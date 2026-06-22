@@ -76,13 +76,8 @@ export class Ledger {
 
   protected readonly filteredLedgers = computed(() => {
     const term = this.search().trim().toLowerCase();
-    const tab = this.tab();
-    return this.ledgers().filter(l => {
-      if (tab === 'with' && !this.hasOpening(l)) return false;
-      if (tab === 'without' && this.hasOpening(l)) return false;
-      if (term && !l.ledgerName.toLowerCase().includes(term)) return false;
-      return true;
-    });
+    if (!term) return this.ledgers();
+    return this.ledgers().filter(l => l.ledgerName.toLowerCase().includes(term));
   });
 
   /** Totals reflect the rows currently shown for the active tab. */
@@ -102,20 +97,21 @@ export class Ledger {
     return ledger.groupName ?? this.groupNameById().get(ledger.groupId) ?? `#${ledger.groupId}`;
   }
 
-  /** A ledger carries an opening balance when either side is non-zero. */
-  private hasOpening(ledger: LedgerModel): boolean {
-    return (ledger.drOpeningBalance ?? 0) !== 0 || (ledger.crOpeningBalance ?? 0) !== 0;
-  }
-
   selectTab(tab: 'all' | 'with' | 'without') {
+    if (this.tab() === tab) return;
     this.tab.set(tab);
+    this.loadLedgers();
   }
 
   loadLedgers() {
     this.loading.set(true);
     this.error.set('');
+    // The active tab maps to the SearchOpening body: "all" sends nothing,
+    // "with"/"without" toggle withOpeningOnly.
+    const tab = this.tab();
+    const query = tab === 'all' ? {} : { withOpeningOnly: tab === 'with' };
     this.service
-      .searchList({ id: null, groupId: null, search: null, withoutCashAtBankAndCashInHand: false })
+      .searchOpening(query)
       .subscribe({
         next: result => {
           this.ledgers.set(result.items);
