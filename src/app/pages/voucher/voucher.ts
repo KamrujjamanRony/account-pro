@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, DOCUMENT } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LedgerService } from '../../services/ledger-service';
 import { CostCenterService } from '../../services/cost-center-service';
@@ -16,13 +16,11 @@ import {
 import { Ledger } from '../../models/ledger.model';
 import { CostCenter } from '../../models/cost-center.model';
 import { VoucherService } from '../../services/voucher-service';
-import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { CanDirective } from '../../directives/can.directive';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-voucher',
-  imports: [ReactiveFormsModule, DecimalPipe, DatePipe, CanDirective],
+  imports: [ReactiveFormsModule, DecimalPipe, DatePipe, CanDirective, RouterLink],
   templateUrl: './voucher.html',
   styleUrl: './voucher.css',
   host: {
@@ -39,14 +37,8 @@ export class Voucher {
   private alert = inject(AlertService);
   private cdr = inject(ChangeDetectorRef);
   private document = inject(DOCUMENT);
-  private excel = inject(ExcelExportService);
-  private route = inject(ActivatedRoute);
 
   protected readonly types = VOUCHER_TYPES;
-
-  /** Company name & address shown on the printed voucher letterhead. */
-  protected readonly companyName = environment.companyName;
-  protected readonly companyAddress = environment.companyAddress;
 
   protected readonly vouchers = signal<VoucherModel[]>([]);
   protected readonly ledgers = signal<Ledger[]>([]);
@@ -66,20 +58,6 @@ export class Voucher {
   protected readonly saving = signal(false);
   protected readonly loadingDetail = signal(false);
   protected readonly formError = signal('');
-
-  // ---- view (read-only) state ----
-  protected readonly viewing = signal<VoucherModel | null>(null);
-  protected readonly loadingView = signal(false);
-
-  protected readonly viewTotalDebit = computed(() =>
-    (this.viewing()?.details ?? []).reduce((sum, d) => sum + (Number(d.debit) || 0), 0),
-  );
-  protected readonly viewTotalCredit = computed(() =>
-    (this.viewing()?.details ?? []).reduce((sum, d) => sum + (Number(d.credit) || 0), 0),
-  );
-
-  /** The voucher total spelled out for the printed "In Word" line. */
-  protected readonly amountInWords = computed(() => this.numberToWords(this.viewTotalDebit()));
 
   // ---- per-row ledger combobox ----
   protected readonly openLine = signal<number | null>(null);
@@ -185,28 +163,6 @@ export class Voucher {
     this.loadCostCenters();
     // A user-driven type change rebuilds the entry grid for that type.
     this.form.controls.type.valueChanges.subscribe(type => this.applyType(type, true));
-    // Deep link from Cash Book / Bank Book: ?vno=<voucherNo> opens the voucher's
-    // read-only view modal (with its Print button).
-    const vno = this.route.snapshot.queryParamMap.get('vno');
-    if (vno) this.openByVoucherNo(vno);
-  }
-
-  /** Resolve a voucher by its number and open its read-only view modal. */
-  private openByVoucherNo(voucherNo: string) {
-    const target = voucherNo.trim().toLowerCase();
-    this.service.search({}).subscribe({
-      next: result => {
-        const match = result.items.find(
-          v => String(v.voucherNo ?? '').trim().toLowerCase() === target,
-        );
-        if (match) {
-          this.openView(match);
-        } else {
-          this.alert.error(`Voucher "${voucherNo}" was not found.`);
-        }
-      },
-      error: () => this.alert.error('Failed to load the voucher.'),
-    });
   }
 
   get lines() {
@@ -344,13 +300,6 @@ export class Voucher {
       next: items => this.costCenters.set(items),
       error: () => {},
     });
-  }
-
-  /** Resolve a cost-center id to its name for read-only display. */
-  costCenterName(value: string | null | undefined): string {
-    if (value == null || value === '') return '';
-    const match = this.costCenters().find(c => String(c.id) === String(value));
-    return match?.name ?? String(value);
   }
 
   clearFilters() {
@@ -674,123 +623,6 @@ export class Voucher {
 
   closeForm() {
     this.showForm.set(false);
-  }
-
-  // ---- view (read-only) ----
-  openView(voucher: VoucherModel) {
-    if (voucher.id == null) return;
-    this.viewing.set(voucher);
-    this.loadingView.set(true);
-    // The list row may not carry detail lines, so fetch the full voucher.
-    this.service.getById(voucher.id).subscribe({
-      next: full => {
-        this.viewing.set(full);
-        this.loadingView.set(false);
-        this.cdr.markForCheck();
-      },
-      error: () => this.loadingView.set(false),
-    });
-  }
-
-  closeView() {
-    this.viewing.set(null);
-  }
-
-  /** Resolve a detail line's ledger name, preferring the API-supplied label. */
-  detailLedgerName(detail: { ledgerId: number; ledgerName?: string | null }): string {
-    return detail.ledgerName ?? this.ledgerName(detail.ledgerId);
-  }
-
-  /** Print the open voucher (A5). The `.voucher-print` sheet is the only thing
-   *  the print stylesheet leaves visible; the modal chrome is hidden. */
-  printVoucher() {
-    if (this.viewing() && !this.loadingView()) window.print();
-  }
-
-  /** Download the open voucher as an .xlsx mirroring the printed layout. */
-  exportVoucherExcel() {
-    const v = this.viewing();
-    if (!v || this.loadingView()) return;
-
-    const rows: ExcelCell[][] = [
-      [this.companyName],
-      [`${this.typeLabel(v.type)} (${v.type})`],
-      [],
-      ['Voucher No', v.voucherNo || `#${v.id}`, '', 'Date', this.fmtDate(v.voucherDate)],
-      ['Reference', v.reference || 'N/A', '', 'Cost Center', this.costCenterName(v.costCenter) || ''],
-      [],
-      ['Ledger', 'Dr. Amount', 'Cr. Amount'],
-    ];
-    for (const d of v.details ?? []) {
-      rows.push([this.detailLedgerName(d), Number(d.debit) || 0, Number(d.credit) || 0]);
-    }
-    rows.push(['Total :', this.viewTotalDebit(), this.viewTotalCredit()]);
-    rows.push([]);
-    rows.push([`In Word : ${this.amountInWords()}`]);
-    rows.push([`Narration : ${v.narration || ''}`]);
-
-    const name = v.voucherNo || `voucher-${v.id}`;
-    this.excel.download(name, rows, 'Voucher');
-  }
-
-  /** Format a date as dd/MM/yyyy; unparseable values are returned unchanged. */
-  fmtDate(value: string | null | undefined): string {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month}/${date.getFullYear()}`;
-  }
-
-  /** Spell out a money amount, e.g. 2000 → "Two Thousand Only". */
-  private numberToWords(value: number): string {
-    const amount = Math.round((Number(value) || 0) * 100) / 100;
-    const whole = Math.floor(amount);
-    const paisa = Math.round((amount - whole) * 100);
-
-    const words = whole === 0 ? 'Zero' : this.wholeToWords(whole);
-    const paisaPart = paisa > 0 ? ` And ${this.wholeToWords(paisa)} Paisa` : '';
-    return `${words}${paisaPart} Only`;
-  }
-
-  private wholeToWords(num: number): string {
-    const ones = [
-      '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-      'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-      'Seventeen', 'Eighteen', 'Nineteen',
-    ];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-    const underThousand = (n: number): string => {
-      let out = '';
-      if (n >= 100) {
-        out += ones[Math.floor(n / 100)] + ' Hundred';
-        n %= 100;
-        if (n) out += ' ';
-      }
-      if (n >= 20) {
-        out += tens[Math.floor(n / 10)];
-        if (n % 10) out += ' ' + ones[n % 10];
-      } else if (n > 0) {
-        out += ones[n];
-      }
-      return out;
-    };
-
-    const scales = ['', ' Thousand', ' Million', ' Billion', ' Trillion'];
-    let n = num;
-    const groups: number[] = [];
-    while (n > 0) {
-      groups.push(n % 1000);
-      n = Math.floor(n / 1000);
-    }
-    const parts: string[] = [];
-    for (let i = groups.length - 1; i >= 0; i--) {
-      if (groups[i] === 0) continue;
-      parts.push(underThousand(groups[i]) + scales[i]);
-    }
-    return parts.join(' ').trim();
   }
 
   save() {

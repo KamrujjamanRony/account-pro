@@ -1,42 +1,5 @@
 /*
-  Voucher print sheet. On screen the `.voucher-print` block is hidden (Tailwind
-  `hidden`); only when printing do we reveal it. The global print rules in
-  styles.css drop the app shell, and the voucher list is marked `no-print`, so
-  the PDF carries only this sheet, sized to A5.
+  The voucher list and its create/edit form are screen-only. Printing a single
+  voucher now lives on the dedicated Print Voucher page (voucher-print), so this
+  page carries no print-specific styles.
 */
-@media print {
-  @page {
-    size: A5 portrait;
-    margin: 12mm;
-  }
-
-  .voucher-print {
-    display: block !important;
-    color: #000 !important;
-  }
-
-  /* Keep the whole document together on the A5 page. */
-  .voucher-sheet {
-    width: 100%;
-    break-inside: avoid;
-  }
-
-  /* Print the header/banner/total shading (Chrome strips backgrounds by default). */
-  .voucher-print * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* Repeat the ledger table header if the voucher spills onto a second page. */
-  .voucher-print thead {
-    display: table-header-group;
-  }
-
-  .voucher-print tr {
-    break-inside: avoid;
-  }
-
-  .voucher-print .signatures {
-    break-inside: avoid;
-  }
-}

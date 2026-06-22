@@ -97,7 +97,7 @@
               <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(item.date) }}</td>
               <td class="py-2 pr-3 text-neutral-700">
                 @if (item.voucherId) {
-                  <a [routerLink]="['/voucher']" [queryParams]="{ vno: item.voucherId }"
+                  <a [routerLink]="['/voucher/print', item.voucherId]"
                     class="font-medium text-primary-600 underline decoration-dotted underline-offset-2 hover:text-primary-700 print:text-neutral-700 print:no-underline"
                     [title]="'View voucher ' + item.voucherId">{{ item.voucherId }}</a>
                 } @else {
@@ -125,7 +125,7 @@
               <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(t.date) }}</td>
               <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">
                 @if (t.voucherId) {
-                  <a [routerLink]="['/voucher']" [queryParams]="{ vno: t.voucherId }"
+                  <a [routerLink]="['/voucher/print', t.voucherId]"
                     class="font-medium text-primary-600 underline decoration-dotted underline-offset-2 hover:text-primary-700 print:text-neutral-700 print:no-underline"
                     [title]="'View voucher ' + t.voucherId">{{ t.voucherId }}</a>
                 } @else {
@@ -159,7 +159,7 @@
               <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(c.date) }}</td>
               <td class="py-2 pr-3 text-neutral-700">
                 @if (c.voucherId) {
-                  <a [routerLink]="['/voucher']" [queryParams]="{ vno: c.voucherId }"
+                  <a [routerLink]="['/voucher/print', c.voucherId]"
                     class="font-medium text-primary-600 underline decoration-dotted underline-offset-2 hover:text-primary-700 print:text-neutral-700 print:no-underline"
                     [title]="'View voucher ' + c.voucherId">{{ c.voucherId }}</a>
                 } @else {

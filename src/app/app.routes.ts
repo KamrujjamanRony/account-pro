@@ -42,6 +42,13 @@ export const routes: Routes = [
         title: `Voucher | ${companyName}`,
       },
       {
+        path: 'voucher/print/:vno',
+        loadComponent: () => import('./pages/voucher-print/voucher-print').then(m => m.VoucherPrint),
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Print Voucher', menu: 'Voucher' },
+        title: `Print Voucher | ${companyName}`,
+      },
+      {
         path: 'cost-center',
         loadComponent: () => import('./pages/cost-centers/cost-centers').then(m => m.CostCenters),
         canActivate: [permissionGuard],

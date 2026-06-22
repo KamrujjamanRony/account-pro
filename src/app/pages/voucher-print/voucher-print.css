@@ -1,0 +1,56 @@
+/* Keep numeric/remarks columns aligned to the top of each row. */
+.report-table th,
+.report-table td {
+  vertical-align: top;
+}
+
+/*
+  Print layout. The app shell (sidebar, breadcrumb) is hidden via the `.no-print`
+  class and the global rules in styles.css; here we only strip the on-screen card
+  chrome so the printed voucher sits edge-to-edge on an A5 page.
+*/
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 12mm;
+  }
+
+  :host {
+    display: block;
+  }
+
+  .print-area {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    color: #000 !important;
+  }
+
+  /* Keep the whole voucher together on the A5 page. */
+  .voucher-sheet {
+    width: 100%;
+    break-inside: avoid;
+  }
+
+  /* Print the header/total shading (Chrome strips backgrounds by default). */
+  .print-area * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Repeat the ledger table header if the voucher spills onto a second page. */
+  .report-table thead {
+    display: table-header-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+
+  .signatures {
+    break-inside: avoid;
+  }
+}
