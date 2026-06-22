@@ -29,7 +29,28 @@ function warmUpApi(): void {
  * module". Detect that specific failure and do a one-time hard reload to pull
  * the fresh index.html and its current chunk references. The sessionStorage flag
  * prevents an infinite reload loop if the failure is not actually deploy-related.
+ *
+ * A real Ctrl+F5 (bypassing the HTTP cache) cannot be triggered from JS, so we
+ * emulate it: purge the Cache Storage and unregister any service worker before
+ * reloading, which forces the browser to refetch the shell and chunks.
  */
+async function hardReload(): Promise<void> {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+    }
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => registration.unregister()));
+    }
+  } catch {
+    // Best-effort cache purge — reload regardless of whether it succeeded.
+  } finally {
+    location.reload();
+  }
+}
+
 function handleChunkLoadError(navError: NavigationError): void {
   const message = String(navError.error?.message ?? navError.error ?? '');
   const isChunkLoadError =
@@ -48,7 +69,7 @@ function handleChunkLoadError(navError: NavigationError): void {
   }
 
   sessionStorage.setItem(RELOAD_FLAG, '1');
-  location.reload();
+  void hardReload();
 }
 
 
