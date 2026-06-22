@@ -47,10 +47,12 @@ export class Voucher {
   protected readonly error = signal('');
 
   // ---- list filters ----
+  // Default the date range to the last week (last 7 days, ending today) so the
+  // list opens on recent vouchers rather than the full history.
   protected readonly search = signal('');
   protected readonly typeFilter = signal('');
-  protected readonly fromDate = signal('');
-  protected readonly toDate = signal('');
+  protected readonly fromDate = signal(this.daysAgo(6));
+  protected readonly toDate = signal(this.today());
 
   // ---- form state ----
   protected readonly showForm = signal(false);
@@ -704,6 +706,13 @@ export class Voucher {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  /** Date `n` days before today as an ISO `yyyy-MM-dd` string. */
+  private daysAgo(n: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
   }
 
   private actor(): string {
