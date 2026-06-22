@@ -60,7 +60,10 @@ export class ProfitLoss {
   }
 
   setLevel(level: ProfitLossLevel) {
+    if (this.level() === level) return;
     this.level.set(level);
+    // Level is a server-side parameter, so re-fetch with the new detail level.
+    this.generate();
   }
 
   /** Classes for a row; section headings render without amounts. */
