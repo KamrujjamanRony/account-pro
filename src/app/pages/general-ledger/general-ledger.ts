@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report-service';
 import { ChartOfAccountService } from '../../services/chart-of-account-service';
 import { LedgerService } from '../../services/ledger-service';
@@ -10,7 +11,7 @@ import { SearchSelect, SelectOption } from '../../components/shared/search-selec
 
 @Component({
   selector: 'app-general-ledger',
-  imports: [DecimalPipe, SearchSelect],
+  imports: [DecimalPipe, SearchSelect, RouterLink],
   templateUrl: './general-ledger.html',
   styleUrl: './general-ledger.css',
 })

@@ -116,7 +116,15 @@
               @for (line of account.lines; track $index) {
                 <tr class="border-t border-neutral-200">
                   <td class="py-2 pr-3 whitespace-nowrap text-neutral-700">{{ fmtDate(line.date) }}</td>
-                  <td class="py-2 px-3 whitespace-nowrap text-neutral-700">{{ line.voucherNo }}</td>
+                  <td class="py-2 px-3 whitespace-nowrap text-neutral-700">
+                    @if (line.voucherNo) {
+                      <a [routerLink]="['/voucher/print', line.voucherNo]"
+                        class="font-medium text-primary-600 underline decoration-dotted underline-offset-2 hover:text-primary-700 print:text-neutral-700 print:no-underline"
+                        [title]="'View voucher ' + line.voucherNo">{{ line.voucherNo }}</a>
+                    } @else {
+                      {{ line.voucherNo }}
+                    }
+                  </td>
                   <td class="py-2 px-3 text-neutral-700">{{ line.narration }}</td>
                   <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.debit | number:'1.2-2' }}</td>
                   <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ line.credit | number:'1.2-2' }}</td>
