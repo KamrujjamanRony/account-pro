@@ -64,7 +64,7 @@
         <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-100">
           <th scope="col" class="px-4 py-3">Voucher No</th>
           <th scope="col" class="px-4 py-3">Date</th>
-          <th scope="col" class="px-4 py-3">Type</th>
+          <!-- <th scope="col" class="px-4 py-3">Type</th> -->
           <th scope="col" class="px-4 py-3">Reference</th>
           <th scope="col" class="px-4 py-3">Narration</th>
           <th scope="col" class="px-4 py-3 text-right">Amount</th>
@@ -81,11 +81,11 @@
             <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
               <td class="px-4 py-3 font-medium text-neutral-900 dark:text-white">{{ voucher.voucherNo || ('#' + voucher.id) }}</td>
               <td class="px-4 py-3 whitespace-nowrap text-neutral-600 dark:text-neutral-400">{{ voucher.voucherDate | date:'mediumDate' }}</td>
-              <td class="px-4 py-3">
+              <!-- <td class="px-4 py-3">
                 <span class="inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300">
                   {{ typeLabel(voucher.type) }}
                 </span>
-              </td>
+              </td> -->
               <td class="px-4 py-3 text-neutral-600 dark:text-neutral-400">{{ voucher.reference || '—' }}</td>
               <td class="px-4 py-3 max-w-xs truncate text-neutral-600 dark:text-neutral-400">{{ voucher.narration || '—' }}</td>
               <td class="px-4 py-3 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ voucherAmount(voucher) | number:'1.2-2' }}</td>
@@ -100,7 +100,7 @@
       </tbody>
       <tfoot class="bg-neutral-600 dark:bg-neutral-800/50">
         <tr class="text-xs font-semibold uppercase tracking-wide text-neutral-100 dark:text-neutral-200">
-          <th scope="row" colspan="5" class="px-4 py-3 text-right">Total</th>
+          <th scope="row" colspan="4" class="px-4 py-3 text-right">Total</th>
           <td class="px-4 py-3 text-right tabular-nums">{{ totalAmount() | number:'1.2-2' }}</td>
           <td class="px-4 py-3"></td>
         </tr>
