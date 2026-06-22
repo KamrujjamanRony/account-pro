@@ -4,10 +4,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ReportService } from '../../services/report-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { BookKind, CashBookLine, CashBookReport } from '../../models/report.model';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-cash-bank-book',
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, ReportHeader],
   templateUrl: './cash-bank-book.html',
   styleUrl: './cash-bank-book.css',
 })

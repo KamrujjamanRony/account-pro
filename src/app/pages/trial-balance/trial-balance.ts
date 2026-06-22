@@ -6,10 +6,11 @@ import { LedgerService } from '../../services/ledger-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { TrialBalanceReport, TrialBalanceTotals } from '../../models/report.model';
 import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-trial-balance',
-  imports: [DecimalPipe, SearchSelect],
+  imports: [DecimalPipe, SearchSelect, ReportHeader],
   templateUrl: './trial-balance.html',
   styleUrl: './trial-balance.css',
 })

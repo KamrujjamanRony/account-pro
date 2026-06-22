@@ -4,10 +4,11 @@ import { ReportService } from '../../services/report-service';
 import { LedgerService } from '../../services/ledger-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { ReceiptPaymentStatement, RpsSection } from '../../models/report.model';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-receipt-payment-statement',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ReportHeader],
   templateUrl: './receipt-payment-statement.html',
   styleUrl: './receipt-payment-statement.css',
 })

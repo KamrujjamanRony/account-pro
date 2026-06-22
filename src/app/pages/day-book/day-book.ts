@@ -8,10 +8,11 @@ import { ExcelCell, ExcelExportService } from '../../services/excel-export-servi
 import { DayBookReport } from '../../models/report.model';
 import { VOUCHER_TYPES } from '../../models/voucher.model';
 import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-day-book',
-  imports: [DecimalPipe, SearchSelect],
+  imports: [DecimalPipe, SearchSelect, ReportHeader],
   templateUrl: './day-book.html',
   styleUrl: './day-book.css',
 })

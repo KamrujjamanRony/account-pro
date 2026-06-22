@@ -5,10 +5,11 @@ import { CostCenterService } from '../../services/cost-center-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { ProfitLossLevel, ProfitLossReport, ProfitLossRow } from '../../models/report.model';
 import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-profit-loss',
-  imports: [DecimalPipe, SearchSelect],
+  imports: [DecimalPipe, SearchSelect, ReportHeader],
   templateUrl: './profit-loss.html',
   styleUrl: './profit-loss.css',
 })

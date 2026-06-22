@@ -67,14 +67,10 @@
   } @else if (report(); as r) {
     <div class="print-area rounded-xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-10 dark:border-neutral-800 dark:bg-white dark:text-neutral-900">
       <!-- Letterhead -->
-      <header class="mb-6 text-center">
-        <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ r.companyName }}</h2>
-        <p class="mt-1 text-base font-semibold text-neutral-800">{{ r.title }}</p>
-        <p class="mt-0.5 text-sm font-medium text-neutral-600">
-          Date: {{ fmtDate(r.fromDate) }} to {{ fmtDate(r.toDate) }}
-          @if (r.option) { | Option: {{ r.option }} }
-        </p>
-      </header>
+      <app-report-header [title]="r.title">
+        Date: {{ fmtDate(r.fromDate) }} to {{ fmtDate(r.toDate) }}
+        @if (r.option) { | Option: {{ r.option }} }
+      </app-report-header>
 
       <table class="report-table w-full border-collapse text-sm">
         <thead>

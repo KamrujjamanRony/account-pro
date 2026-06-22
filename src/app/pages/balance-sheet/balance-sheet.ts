@@ -3,10 +3,11 @@ import { DecimalPipe } from '@angular/common';
 import { ReportService } from '../../services/report-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { BalanceSheetLevel, BalanceSheetReport } from '../../models/report.model';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-balance-sheet',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ReportHeader],
   templateUrl: './balance-sheet.html',
   styleUrl: './balance-sheet.css',
 })

@@ -8,10 +8,11 @@ import { CostCenterService } from '../../services/cost-center-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { GeneralLedgerReport } from '../../models/report.model';
 import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-general-ledger',
-  imports: [DecimalPipe, SearchSelect, RouterLink],
+  imports: [DecimalPipe, SearchSelect, RouterLink, ReportHeader],
   templateUrl: './general-ledger.html',
   styleUrl: './general-ledger.css',
 })
