@@ -1,12 +1,13 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { CompanyProfileService } from '../../../services/company-profile-service';
 
 /**
- * Professional letterhead shared by every printed accounts report. Renders the
- * company name / address / contact from the active {@link CompanyProfileService}
- * profile, the report {@link title}, and a projected meta line (date range,
- * cost center, etc.). The profile's `marginTop` (in mm) is applied as the top
- * margin of the sheet so spacing is consistent on screen and in print.
+ * Professional letterhead shared by every printed accounts report. Renders a
+ * monogram badge, the company name (display font) / address / contact from the
+ * active {@link CompanyProfileService} profile, the report {@link title}, and a
+ * projected meta line (date range, cost center, etc.). The profile's `marginTop`
+ * (in mm) is applied as the top margin of the sheet so spacing is consistent on
+ * screen and in print.
  *
  * Usage:
  * ```html
@@ -17,21 +18,8 @@ import { CompanyProfileService } from '../../../services/company-profile-service
  */
 @Component({
   selector: 'app-report-header',
-  template: `
-    <header class="report-letterhead mb-6 text-center" [style.marginTop.mm]="marginTop()">
-      <h2 class="text-2xl font-bold tracking-tight text-neutral-900">{{ profile().name }}</h2>
-      @if (profile().address) {
-        <p class="mt-0.5 text-xs text-neutral-600">{{ profile().address }}</p>
-      }
-      @if (profile().contact) {
-        <p class="text-xs text-neutral-600">Contact: {{ profile().contact }}</p>
-      }
-      <p class="mt-2 text-base font-semibold text-neutral-800">{{ title() }}</p>
-      <p class="mt-0.5 text-sm font-medium text-neutral-600">
-        <ng-content />
-      </p>
-    </header>
-  `,
+  templateUrl: './report-header.html',
+  styleUrl: './report-header.css',
 })
 export class ReportHeader {
   private readonly profileService = inject(CompanyProfileService);
@@ -44,4 +32,12 @@ export class ReportHeader {
 
   /** Top margin of the sheet, in millimetres, from the active profile. */
   protected readonly marginTop = this.profileService.marginTop;
+
+  /** Up to two uppercase initials taken from the company name for the badge. */
+  protected readonly monogram = computed(() => {
+    const words = this.profile().name.trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '';
+    const letters = words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[1][0];
+    return letters.toUpperCase();
+  });
 }

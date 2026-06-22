@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
@@ -9,6 +10,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth-interceptor';
+import { CompanyProfileService } from './services/company-profile-service';
 import { environment } from '../environments/environment';
 
 /**
@@ -80,5 +82,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withNavigationErrorHandler(handleChunkLoadError)),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAppInitializer(() => warmUpApi()),
+    provideAppInitializer(() => inject(CompanyProfileService).load()),
   ],
 };

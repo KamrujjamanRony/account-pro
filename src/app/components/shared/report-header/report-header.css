@@ -1,0 +1,117 @@
+:host {
+  display: block;
+}
+
+.report-letterhead {
+  position: relative;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Monogram badge — initials in a rounded gradient square. */
+.monogram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.55rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, var(--color-primary-600, #4f46e5), var(--color-accent-500, #8b5cf6));
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 18px -8px rgba(79, 70, 229, 0.65);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.monogram:hover {
+  transform: translateY(-2px) rotate(-3deg);
+  box-shadow: 0 12px 22px -8px rgba(79, 70, 229, 0.7);
+}
+
+/* Company name — elegant display serif. */
+.org-name {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: 1.95rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+  color: #0f172a;
+}
+
+.org-meta {
+  margin: 0.18rem 0 0;
+  font-size: 0.74rem;
+  color: #475569;
+}
+
+.org-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.org-contact svg {
+  width: 0.82rem;
+  height: 0.82rem;
+  color: var(--color-primary-600, #4f46e5);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Gradient divider under the company block. */
+.rule {
+  display: block;
+  width: 130px;
+  height: 3px;
+  margin: 0.7rem auto 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-primary-500, #6366f1),
+    var(--color-accent-500, #8b5cf6),
+    transparent
+  );
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Report title flanked by tapering rules. */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.title-line {
+  width: 38px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #94a3b8);
+}
+
+.title-line:last-child {
+  background: linear-gradient(90deg, #94a3b8, transparent);
+}
+
+.report-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #1f2937;
+}
+
+.report-meta {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+}
