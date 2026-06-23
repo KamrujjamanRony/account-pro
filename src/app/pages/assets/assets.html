@@ -1,0 +1,415 @@
+<div class="mx-auto max-w-7xl px-4 pb-12">
+  <!-- Header -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Fixed Assets</h1>
+      <p class="text-sm text-neutral-500">Manage assets, post depreciation, and record disposals.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button
+        *appCan="'Asset:edit'"
+        type="button"
+        (click)="openRunDepreciation()"
+        class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+      >
+        Run depreciation
+      </button>
+      <button
+        *appCan="'Asset:create'"
+        type="button"
+        (click)="openCreate()"
+        class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      >
+        + Add asset
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Controls -->
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="inline-flex rounded-lg border border-neutral-300 bg-white p-0.5 text-sm dark:border-neutral-700 dark:bg-neutral-800">
+      @for (t of [{ k: 'Active', label: 'Active' }, { k: 'Disposed', label: 'Disposed' }, { k: 'all', label: 'All' }]; track t.k) {
+        <button
+          type="button"
+          (click)="setTab($any(t.k))"
+          [class]="tab() === t.k
+            ? 'rounded-md bg-primary-600 px-3 py-1.5 font-medium text-white'
+            : 'rounded-md px-3 py-1.5 font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700'"
+        >
+          {{ t.label }}
+        </button>
+      }
+    </div>
+    <div>
+      <label for="asset-search" class="sr-only">Search assets</label>
+      <input id="asset-search" type="search" placeholder="Search by name, category or serial…"
+        [value]="search()" (input)="search.set($any($event.target).value)"
+        class="w-full max-w-xs rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <table class="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
+      <thead class="bg-neutral-600 dark:bg-neutral-800/50">
+        <tr class="text-left text-xs font-semibold uppercase tracking-wide text-neutral-100">
+          <th scope="col" class="px-4 py-3">Asset</th>
+          <th scope="col" class="px-4 py-3">Category</th>
+          <th scope="col" class="px-4 py-3">Method</th>
+          <th scope="col" class="px-4 py-3 text-right">Cost</th>
+          <th scope="col" class="px-4 py-3 text-right">Accum. dep.</th>
+          <th scope="col" class="px-4 py-3 text-right">Net book value</th>
+          <th scope="col" class="px-4 py-3">Status</th>
+          <th scope="col" class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+        @if (loading()) {
+          <tr><td colspan="8" class="px-4 py-8 text-center text-neutral-500">Loading…</td></tr>
+        } @else if (filteredAssets().length === 0) {
+          <tr><td colspan="8" class="px-4 py-8 text-center text-neutral-500">No assets found. Add one to get started.</td></tr>
+        } @else {
+          @for (a of filteredAssets(); track a.id) {
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+              <td class="px-4 py-3">
+                <div class="font-medium text-neutral-900 dark:text-white">{{ a.assetName }}</div>
+                @if (a.serialNo) {
+                  <div class="text-xs text-neutral-500">SN: {{ a.serialNo }}</div>
+                }
+              </td>
+              <td class="px-4 py-3 text-neutral-700 dark:text-neutral-300">{{ a.category }}</td>
+              <td class="px-4 py-3 text-neutral-700 dark:text-neutral-300">
+                {{ a.method === 'WDV' ? 'WDV ' + (a.ratePercent | number:'1.0-2') + '%' : 'SL ' + a.usefulLifeMonths + 'm' }}
+              </td>
+              <td class="px-4 py-3 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ a.cost | number:'1.2-2' }}</td>
+              <td class="px-4 py-3 text-right tabular-nums text-neutral-700 dark:text-neutral-300">{{ (a.accumulatedDepreciation ?? 0) | number:'1.2-2' }}</td>
+              <td class="px-4 py-3 text-right tabular-nums font-medium text-neutral-900 dark:text-white">{{ netBook(a) | number:'1.2-2' }}</td>
+              <td class="px-4 py-3">
+                @if (isDisposed(a)) {
+                  <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">Disposed</span>
+                } @else if (a.isActive) {
+                  <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">Active</span>
+                } @else {
+                  <span class="inline-flex rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">Inactive</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                @if (!isDisposed(a)) {
+                  <button *appCan="'Asset:edit'" type="button" (click)="openEdit(a)" class="rounded px-2 py-1 text-sm font-medium text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950">Edit</button>
+                  <button *appCan="'Asset:edit'" type="button" (click)="openDispose(a)" class="rounded px-2 py-1 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40">Dispose</button>
+                  <button *appCan="'Asset:delete'" type="button" (click)="remove(a)" class="rounded px-2 py-1 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40">Delete</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+      @if (!loading() && filteredAssets().length > 0) {
+        <tfoot class="border-t-2 border-neutral-200 bg-neutral-50 text-sm font-semibold dark:border-neutral-700 dark:bg-neutral-800/40">
+          <tr>
+            <td class="px-4 py-3 text-neutral-900 dark:text-white" colspan="3">Total</td>
+            <td class="px-4 py-3 text-right tabular-nums text-neutral-900 dark:text-white">{{ totals().cost | number:'1.2-2' }}</td>
+            <td class="px-4 py-3 text-right tabular-nums text-neutral-900 dark:text-white">{{ totals().accumulated | number:'1.2-2' }}</td>
+            <td class="px-4 py-3 text-right tabular-nums text-neutral-900 dark:text-white">{{ totals().netBook | number:'1.2-2' }}</td>
+            <td class="px-4 py-3" colspan="2"></td>
+          </tr>
+        </tfoot>
+      }
+    </table>
+  </div>
+</div>
+
+<!-- Create / edit dialog -->
+@if (showForm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="asset-form-title">
+    <div class="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <h2 id="asset-form-title" class="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
+        {{ editingId() ? 'Edit asset' : 'Add asset' }}
+      </h2>
+
+      @if (formError()) {
+        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ formError() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label for="asset-name" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Asset name</label>
+            <input id="asset-name" type="text" formControlName="assetName"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+            @if (form.controls.assetName.touched && form.controls.assetName.invalid) {
+              <p class="mt-1 text-xs text-red-600">Asset name is required.</p>
+            }
+          </div>
+
+          <div>
+            <label for="asset-category" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Category</label>
+            <input id="asset-category" type="text" formControlName="category"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+
+          <div>
+            <label for="asset-location" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Location</label>
+            <input id="asset-location" type="text" formControlName="location"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+
+          <div>
+            <label for="asset-serial" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Serial no.</label>
+            <input id="asset-serial" type="text" formControlName="serialNo"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+
+          <div>
+            <label for="asset-purchase-date" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Purchase date</label>
+            <input id="asset-purchase-date" type="date" formControlName="purchaseDate"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+        </div>
+
+        <!-- Ledger links -->
+        <fieldset class="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+          <legend class="px-1 text-sm font-medium text-neutral-700 dark:text-neutral-300">Ledger links</legend>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label for="asset-ledger" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Asset ledger</label>
+              <select id="asset-ledger" formControlName="assetLedgerId"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                <option [ngValue]="null" disabled>Select ledger…</option>
+                @for (l of ledgers(); track l.id) {
+                  <option [ngValue]="l.id">{{ l.ledgerName }}</option>
+                }
+              </select>
+              @if (form.controls.assetLedgerId.touched && form.controls.assetLedgerId.invalid) {
+                <p class="mt-1 text-xs text-red-600">Required.</p>
+              }
+            </div>
+
+            <div>
+              <label for="asset-accum-ledger" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Accumulated dep. ledger</label>
+              <select id="asset-accum-ledger" formControlName="accumulatedDepLedgerId"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                <option [ngValue]="null" disabled>Select ledger…</option>
+                @for (l of ledgers(); track l.id) {
+                  <option [ngValue]="l.id">{{ l.ledgerName }}</option>
+                }
+              </select>
+              @if (form.controls.accumulatedDepLedgerId.touched && form.controls.accumulatedDepLedgerId.invalid) {
+                <p class="mt-1 text-xs text-red-600">Required.</p>
+              }
+            </div>
+
+            <div>
+              <label for="asset-expense-ledger" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Dep. expense ledger</label>
+              <select id="asset-expense-ledger" formControlName="depExpenseLedgerId"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                <option [ngValue]="null" disabled>Select ledger…</option>
+                @for (l of ledgers(); track l.id) {
+                  <option [ngValue]="l.id">{{ l.ledgerName }}</option>
+                }
+              </select>
+              @if (form.controls.depExpenseLedgerId.touched && form.controls.depExpenseLedgerId.invalid) {
+                <p class="mt-1 text-xs text-red-600">Required.</p>
+              }
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Depreciation -->
+        <fieldset class="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+          <legend class="px-1 text-sm font-medium text-neutral-700 dark:text-neutral-300">Depreciation</legend>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label for="asset-cost" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Cost</label>
+              <input id="asset-cost" type="number" step="0.01" min="0" formControlName="cost"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+              @if (form.controls.cost.touched && form.controls.cost.invalid) {
+                <p class="mt-1 text-xs text-red-600">Cost is required.</p>
+              }
+            </div>
+
+            <div>
+              <label for="asset-salvage" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Salvage value</label>
+              <input id="asset-salvage" type="number" step="0.01" min="0" formControlName="salvageValue"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+            </div>
+
+            <div>
+              <label for="asset-method" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Method</label>
+              <select id="asset-method" formControlName="method" (change)="onMethodChange($any($event.target).value)"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+                <option value="SL">Straight-line (SL)</option>
+                <option value="WDV">Written-down value (WDV)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="asset-dep-start" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Depreciation start date</label>
+              <input id="asset-dep-start" type="date" formControlName="depreciationStartDate"
+                class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+            </div>
+
+            @if (method() === 'SL') {
+              <div>
+                <label for="asset-life" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Useful life (months)</label>
+                <input id="asset-life" type="number" step="1" min="0" formControlName="usefulLifeMonths"
+                  class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+              </div>
+            } @else {
+              <div>
+                <label for="asset-rate" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Rate (% per year)</label>
+                <input id="asset-rate" type="number" step="0.01" min="0" max="100" formControlName="ratePercent"
+                  class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+              </div>
+            }
+          </div>
+        </fieldset>
+
+        <div>
+          <label for="asset-note" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Note</label>
+          <textarea id="asset-note" rows="2" formControlName="note"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"></textarea>
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" formControlName="isActive"
+            class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+          Active
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" (click)="closeForm()"
+            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
+          <button type="submit" [disabled]="saving()"
+            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
+            {{ saving() ? 'Saving…' : 'Save' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Run depreciation dialog -->
+@if (showDepForm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="asset-dep-title">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <h2 id="asset-dep-title" class="mb-1 text-lg font-semibold text-neutral-900 dark:text-white">Run depreciation</h2>
+      <p class="mb-4 text-sm text-neutral-500">Posts depreciation up to the selected date.</p>
+
+      @if (depError()) {
+        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ depError() }}</div>
+      }
+
+      <form [formGroup]="depForm" (ngSubmit)="runDepreciation()" class="space-y-4" novalidate>
+        <div>
+          <label for="dep-as-of" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">As of date</label>
+          <input id="dep-as-of" type="date" formControlName="asOfDate"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+        </div>
+
+        <div>
+          <label for="dep-asset" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Asset</label>
+          <select id="dep-asset" formControlName="assetId"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+            <option [ngValue]="null">All active assets</option>
+            @for (a of assets(); track a.id) {
+              <option [ngValue]="a.id">{{ a.assetName }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" (click)="closeRunDepreciation()"
+            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
+          <button type="submit" [disabled]="running()"
+            class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60">
+            {{ running() ? 'Posting…' : 'Run' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Dispose dialog -->
+@if (showDisposeForm()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="asset-dispose-title">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
+      <h2 id="asset-dispose-title" class="mb-1 text-lg font-semibold text-neutral-900 dark:text-white">Dispose asset</h2>
+      <p class="mb-4 text-sm text-neutral-500">{{ disposeAsset()?.assetName }}</p>
+
+      @if (disposeError()) {
+        <div role="alert" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ disposeError() }}</div>
+      }
+
+      <form [formGroup]="disposeForm" (ngSubmit)="confirmDispose()" class="space-y-4" novalidate>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label for="dispose-date" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Disposal date</label>
+            <input id="dispose-date" type="date" formControlName="disposalDate"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+          </div>
+
+          <div>
+            <label for="dispose-amount" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Disposal amount</label>
+            <input id="dispose-amount" type="number" step="0.01" min="0" formControlName="disposalAmount"
+              class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+            @if (disposeForm.controls.disposalAmount.touched && disposeForm.controls.disposalAmount.invalid) {
+              <p class="mt-1 text-xs text-red-600">Amount is required.</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="dispose-received" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Received in ledger</label>
+          <select id="dispose-received" formControlName="receivedInLedgerId"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+            <option [ngValue]="null" disabled>Select ledger…</option>
+            @for (l of ledgers(); track l.id) {
+              <option [ngValue]="l.id">{{ l.ledgerName }}</option>
+            }
+          </select>
+          @if (disposeForm.controls.receivedInLedgerId.touched && disposeForm.controls.receivedInLedgerId.invalid) {
+            <p class="mt-1 text-xs text-red-600">Required.</p>
+          }
+        </div>
+
+        <div>
+          <label for="dispose-gainloss" class="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Gain / loss ledger</label>
+          <select id="dispose-gainloss" formControlName="gainLossLedgerId"
+            class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800">
+            <option [ngValue]="null" disabled>Select ledger…</option>
+            @for (l of ledgers(); track l.id) {
+              <option [ngValue]="l.id">{{ l.ledgerName }}</option>
+            }
+          </select>
+          @if (disposeForm.controls.gainLossLedgerId.touched && disposeForm.controls.gainLossLedgerId.invalid) {
+            <p class="mt-1 text-xs text-red-600">Required.</p>
+          }
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" formControlName="depreciateUpToDisposal"
+            class="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+          Depreciate up to disposal date
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" (click)="closeDispose()"
+            class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Cancel</button>
+          <button type="submit" [disabled]="disposing()"
+            class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60">
+            {{ disposing() ? 'Disposing…' : 'Dispose' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

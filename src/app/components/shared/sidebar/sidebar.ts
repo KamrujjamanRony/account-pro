@@ -110,6 +110,11 @@ export class Sidebar {
       icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 4v6l4 2',
     },
     {
+      label: 'Asset',
+      path: '/asset',
+      icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16ZM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12',
+    },
+    {
       label: 'Report',
       icon: 'M9 17v-5m3 5v-8m3 8v-3M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z',
       children: [

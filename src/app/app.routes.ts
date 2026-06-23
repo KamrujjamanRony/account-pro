@@ -56,6 +56,13 @@ export const routes: Routes = [
         title: `Cost Centers | ${companyName}`,
       },
       {
+        path: 'asset',
+        loadComponent: () => import('./pages/assets/assets').then(m => m.Assets),
+        canActivate: [permissionGuard],
+        data: { breadcrumb: 'Fixed Assets', menu: 'Asset' },
+        title: `Fixed Assets | ${companyName}`,
+      },
+      {
         path: 'cash-book',
         loadComponent: () => import('./pages/cash-bank-book/cash-bank-book').then(m => m.CashBankBook),
         canActivate: [permissionGuard],
