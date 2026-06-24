@@ -60,9 +60,11 @@
       <app-report-header [title]="typeLabel(v.type)" />
 
       <!-- Meta -->
-      <div class="mt-4 flex justify-between border-t border-b border-neutral-300 py-2 text-xs text-neutral-800">
+      <div class="mt-4 flex items-center justify-between gap-4 border-t border-b border-neutral-300 py-2 text-xs text-neutral-800">
         <div class="space-y-1">
-          <p><span class="inline-block w-20 text-neutral-500">Voucher No</span> {{ v.voucherNo || ('#' + v.id) }}</p>
+          <p><span class="inline-block w-20 text-neutral-500">Voucher No</span> {{ v.voucherNo || ('#' + v.id) }} <span>@if (v.voucherNo || v.id != null) {
+          <app-barcode [value]="v.voucherNo || ('#' + v.id)" [barHeight]="16" />
+        }</span></p>
           <p><span class="inline-block w-20 text-neutral-500">Reference</span> {{ v.reference || 'N/A' }}</p>
           <p><span class="inline-block w-20 text-neutral-500">Cost Center</span> {{ costCenterName(v.costCenter) || 'N/A' }}</p>
         </div>

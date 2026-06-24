@@ -10,11 +10,12 @@ import { Voucher as VoucherModel, VOUCHER_TYPES } from '../../models/voucher.mod
 import { Ledger } from '../../models/ledger.model';
 import { CostCenter } from '../../models/cost-center.model';
 import { ReportHeader } from '../../components/shared/report-header/report-header';
+import { Barcode } from '../../components/shared/barcode/barcode';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-voucher-print',
-  imports: [DecimalPipe, ReportHeader],
+  imports: [DecimalPipe, ReportHeader, Barcode],
   templateUrl: './voucher-print.html',
   styleUrl: './voucher-print.css',
 })
