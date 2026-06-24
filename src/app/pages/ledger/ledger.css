@@ -1,0 +1,35 @@
+/* The interactive table is shown on screen; the print sheet is revealed only
+   when printing, where the global rules in styles.css isolate `.print-area`. */
+.print-sheet {
+  display: none;
+}
+
+.report-table th,
+.report-table td {
+  vertical-align: top;
+}
+
+@media print {
+  .print-sheet {
+    display: block;
+  }
+
+  .print-area {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    color: #000 !important;
+  }
+
+  /* Repeat the table header across page breaks and keep rows intact. */
+  .report-table thead {
+    display: table-header-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+}

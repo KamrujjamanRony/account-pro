@@ -1,18 +1,42 @@
-<div class="mx-auto max-w-7xl px-4 pb-12">
+<div class="mx-auto max-w-7xl px-4 pb-12 no-print">
   <!-- Header -->
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
     <div>
       <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Ledger</h1>
       <p class="text-sm text-neutral-500">Manage ledgers and their opening balances.</p>
     </div>
-    <button
-      *appCan="'Ledger:create'"
-      type="button"
-      (click)="openCreate()"
-      class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-    >
-      + Add ledger
-    </button>
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        (click)="exportExcel()"
+        [disabled]="!canPrint()"
+        class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+        </svg>
+        Download Excel
+      </button>
+      <button
+        type="button"
+        (click)="print()"
+        [disabled]="!canPrint()"
+        class="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+        </svg>
+        Print / Save PDF
+      </button>
+      <button
+        *appCan="'Ledger:create'"
+        type="button"
+        (click)="openCreate()"
+        class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      >
+        + Add ledger
+      </button>
+    </div>
   </div>
 
   @if (error()) {
@@ -42,12 +66,98 @@
     </div>
   </div>
 
-  <!-- Search -->
-  <div class="mb-3">
-    <label for="ledger-search" class="sr-only">Search ledgers</label>
-    <input id="ledger-search" type="search" placeholder="Search by name…"
-      [value]="search()" (input)="search.set($any($event.target).value)"
-      class="w-full max-w-xs rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+  <!-- Filters -->
+  <div class="mb-3 flex flex-wrap items-center gap-3">
+    <div>
+      <label for="ledger-search" class="sr-only">Search ledgers</label>
+      <input id="ledger-search" type="search" placeholder="Search by name…"
+        [value]="search()" (input)="search.set($any($event.target).value)"
+        class="w-full max-w-xs rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
+    </div>
+    <div class="relative w-full max-w-xs" (click)="$event.stopPropagation()">
+      <span id="ledger-filter-group-label" class="sr-only">Filter by group</span>
+      <button
+        id="ledger-filter-group-trigger"
+        type="button"
+        (click)="toggleFilterGroupDropdown($event)"
+        (keydown)="onFilterGroupTriggerKeydown($event)"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-controls="ledger-filter-group-listbox"
+        [attr.aria-expanded]="filterGroupOpen()"
+        aria-labelledby="ledger-filter-group-label"
+        class="flex w-full items-center justify-between gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-left text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800"
+      >
+        <span [class.text-neutral-400]="filterGroupIds().length === 0">{{ filterGroupLabel() || 'All groups' }}</span>
+        <span class="flex items-center gap-1">
+          @if (filterGroupIds().length > 0) {
+            <span (click)="clearFilterGroups($event)" role="button" tabindex="0" aria-label="Clear group filter"
+              (keydown.enter)="clearFilterGroups($event)" (keydown.space)="clearFilterGroups($event)"
+              class="rounded p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </span>
+          }
+          <svg class="h-4 w-4 shrink-0 text-neutral-400 transition-transform" [class.rotate-180]="filterGroupOpen()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </button>
+
+      @if (filterGroupOpen()) {
+        <div class="absolute z-10 mt-1 w-full rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+          <div class="p-2">
+            <label for="ledger-filter-group-search" class="sr-only">Search groups</label>
+            <input
+              id="ledger-filter-group-search"
+              type="search"
+              placeholder="Search groups…"
+              role="combobox"
+              aria-controls="ledger-filter-group-listbox"
+              aria-expanded="true"
+              [attr.aria-activedescendant]="'ledger-filter-group-opt-' + activeFilterGroupIndex()"
+              [value]="filterGroupSearch()"
+              (input)="onFilterGroupSearchInput($any($event.target).value)"
+              (keydown)="onFilterGroupSearchKeydown($event)"
+              class="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-600 dark:bg-neutral-900"
+            />
+          </div>
+          <ul id="ledger-filter-group-listbox" role="listbox" aria-multiselectable="true" aria-labelledby="ledger-filter-group-label" class="max-h-56 overflow-y-auto pb-1">
+            @for (group of filteredFilterGroups(); track group.id; let i = $index) {
+              <li role="option" [attr.id]="'ledger-filter-group-opt-' + i" [attr.aria-selected]="isFilterGroupSelected(group.id)">
+                <button
+                  type="button"
+                  (click)="toggleFilterGroup(group)"
+                  (mousemove)="activeFilterGroupIndex.set(i)"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 dark:text-neutral-200"
+                  [class.bg-neutral-100]="activeFilterGroupIndex() === i"
+                  [class.dark:bg-neutral-700]="activeFilterGroupIndex() === i"
+                >
+                  <span
+                    class="flex h-4 w-4 shrink-0 items-center justify-center rounded border"
+                    [class.border-primary-600]="isFilterGroupSelected(group.id)"
+                    [class.bg-primary-600]="isFilterGroupSelected(group.id)"
+                    [class.border-neutral-300]="!isFilterGroupSelected(group.id)"
+                    [class.dark:border-neutral-600]="!isFilterGroupSelected(group.id)"
+                    aria-hidden="true"
+                  >
+                    @if (isFilterGroupSelected(group.id)) {
+                      <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    }
+                  </span>
+                  <span>{{ group.name }}</span>
+                </button>
+              </li>
+            } @empty {
+              <li class="px-3 py-3 text-center text-sm text-neutral-500">No groups found.</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
   </div>
 
   <!-- Table -->
@@ -93,6 +203,39 @@
       </tfoot>
     </table>
   </div>
+</div>
+
+<!-- Print sheet: hidden on screen, isolated by the global print rules. -->
+<div class="print-area print-sheet mx-auto max-w-6xl bg-white p-6 text-neutral-900 sm:p-10">
+  <app-report-header title="Ledger">{{ printMeta() }}</app-report-header>
+
+  <table class="report-table w-full border-collapse text-sm">
+    <thead>
+      <tr class="border-y-2 border-neutral-700 text-neutral-800">
+        <th scope="col" class="py-2 pr-3 text-left font-bold">Ledger</th>
+        <th scope="col" class="py-2 px-3 text-left font-bold">Group</th>
+        <th scope="col" class="py-2 pl-3 text-right font-bold">Opening (Dr)</th>
+        <th scope="col" class="py-2 pl-3 text-right font-bold">Opening (Cr)</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (ledger of filteredLedgers(); track ledger.id) {
+        <tr class="border-b border-neutral-200">
+          <td class="py-2 pr-3 text-neutral-800">{{ ledger.ledgerName }}</td>
+          <td class="py-2 px-3 text-neutral-700">{{ groupName(ledger) }}</td>
+          <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ ledger.drOpeningBalance | number:'1.2-2' }}</td>
+          <td class="py-2 pl-3 text-right tabular-nums text-neutral-700">{{ ledger.crOpeningBalance | number:'1.2-2' }}</td>
+        </tr>
+      }
+    </tbody>
+    <tfoot>
+      <tr class="border-y-2 border-neutral-700 font-bold text-neutral-900">
+        <td class="py-2 pr-3" colspan="2">Total</td>
+        <td class="py-2 pl-3 text-right tabular-nums">{{ totalDr() | number:'1.2-2' }}</td>
+        <td class="py-2 pl-3 text-right tabular-nums">{{ totalCr() | number:'1.2-2' }}</td>
+      </tr>
+    </tfoot>
+  </table>
 </div>
 
 <!-- Form dialog -->

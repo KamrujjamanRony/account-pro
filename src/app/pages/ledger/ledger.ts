@@ -5,18 +5,21 @@ import { LedgerService } from '../../services/ledger-service';
 import { ChartOfAccountService } from '../../services/chart-of-account-service';
 import { AuthService } from '../../services/auth-service';
 import { AlertService } from '../../services/alert-service';
-import { Ledger as LedgerModel } from '../../models/ledger.model';
+import { CompanyProfileService } from '../../services/company-profile-service';
+import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
+import { Ledger as LedgerModel, LedgerSearchQuery } from '../../models/ledger.model';
 import { ChartOfAccount } from '../../models/chart-of-account.model';
 import { CanDirective } from '../../directives/can.directive';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-ledger',
-  imports: [ReactiveFormsModule, DecimalPipe, CanDirective],
+  imports: [ReactiveFormsModule, DecimalPipe, CanDirective, ReportHeader],
   templateUrl: './ledger.html',
   styleUrl: './ledger.css',
   host: {
-    // Close the group combobox when clicking anywhere outside it.
-    '(document:click)': 'closeGroupDropdown()',
+    // Close the group comboboxes when clicking anywhere outside them.
+    '(document:click)': 'closeAllDropdowns()',
   },
 })
 export class Ledger {
@@ -25,7 +28,12 @@ export class Ledger {
   private accountService = inject(ChartOfAccountService);
   private auth = inject(AuthService);
   private alert = inject(AlertService);
+  private excel = inject(ExcelExportService);
+  private profileService = inject(CompanyProfileService);
   private document = inject(DOCUMENT);
+
+  /** Active letterhead profile, for the Excel export's company line. */
+  protected readonly profile = this.profileService.profile;
 
   protected readonly ledgers = signal<LedgerModel[]>([]);
   protected readonly groups = signal<ChartOfAccount[]>([]);
@@ -35,6 +43,30 @@ export class Ledger {
 
   // ---- opening-balance tabs ----
   protected readonly tab = signal<'all' | 'with' | 'without'>('all');
+
+  // ---- list group filter (server-side, multi-select) ----
+  protected readonly filterGroupIds = signal<number[]>([]);
+  protected readonly filterGroupOpen = signal(false);
+  protected readonly filterGroupSearch = signal('');
+  /** Index of the keyboard-highlighted option within filteredFilterGroups(). */
+  protected readonly activeFilterGroupIndex = signal(0);
+
+  protected readonly filteredFilterGroups = computed(() => {
+    const term = this.filterGroupSearch().trim().toLowerCase();
+    const list = this.groups();
+    if (!term) return list;
+    return list.filter(g => g.name.toLowerCase().includes(term));
+  });
+
+  /** Trigger label: group name when one is picked, a count when several. */
+  protected readonly filterGroupLabel = computed(() => {
+    const ids = this.filterGroupIds();
+    if (ids.length === 0) return '';
+    if (ids.length === 1) {
+      return this.groups().find(g => g.id === ids[0])?.name ?? '1 group';
+    }
+    return `${ids.length} groups selected`;
+  });
 
   protected readonly showForm = signal(false);
   protected readonly editingId = signal<number | null>(null);
@@ -88,6 +120,31 @@ export class Ledger {
     this.filteredLedgers().reduce((sum, l) => sum + (l.crOpeningBalance ?? 0), 0),
   );
 
+  /** Something to print only when rows are currently shown. */
+  protected readonly canPrint = computed(() => this.filteredLedgers().length > 0);
+
+  /** Meta line under the printed/exported title, summarising the active filters. */
+  protected readonly printMeta = computed(() => {
+    const tab = this.tab();
+    const parts: string[] = [
+      tab === 'with'
+        ? 'With opening balance'
+        : tab === 'without'
+          ? 'Without opening balance'
+          : 'All ledgers',
+    ];
+    const ids = this.filterGroupIds();
+    if (ids.length) {
+      const names = this.groups()
+        .filter(g => g.id != null && ids.includes(g.id))
+        .map(g => g.name);
+      if (names.length) parts.push(`Group: ${names.join(', ')}`);
+    }
+    const term = this.search().trim();
+    if (term) parts.push(`Search: "${term}"`);
+    return parts.join(' • ');
+  });
+
   constructor() {
     this.loadLedgers();
     this.loadGroups();
@@ -103,13 +160,131 @@ export class Ledger {
     this.loadLedgers();
   }
 
+  // ---- list group filter combobox (multi-select) ----
+  isFilterGroupSelected(id: number | undefined): boolean {
+    return id != null && this.filterGroupIds().includes(id);
+  }
+
+  toggleFilterGroupDropdown(event: Event) {
+    // Keep the click from reaching the document handler that closes the menu.
+    event.stopPropagation();
+    if (this.filterGroupOpen()) {
+      this.closeFilterGroupDropdown();
+    } else {
+      this.openFilterGroupDropdown();
+    }
+  }
+
+  private openFilterGroupDropdown() {
+    this.filterGroupOpen.set(true);
+    this.filterGroupSearch.set('');
+    this.activeFilterGroupIndex.set(0);
+    this.focusAfterRender('ledger-filter-group-search');
+  }
+
+  closeFilterGroupDropdown() {
+    this.filterGroupOpen.set(false);
+  }
+
+  /** Keyboard handling on the closed trigger: open on Enter / Space / ArrowDown. */
+  onFilterGroupTriggerKeydown(event: KeyboardEvent) {
+    if (this.filterGroupOpen()) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.openFilterGroupDropdown();
+    }
+  }
+
+  onFilterGroupSearchInput(value: string) {
+    this.filterGroupSearch.set(value);
+    this.activeFilterGroupIndex.set(0);
+  }
+
+  /** Keyboard handling inside the open menu (focus stays on the search box). */
+  onFilterGroupSearchKeydown(event: KeyboardEvent) {
+    const groups = this.filteredFilterGroups();
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.activeFilterGroupIndex.update(i => Math.min(i + 1, groups.length - 1));
+        this.scrollActiveFilterGroupIntoView();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.activeFilterGroupIndex.update(i => Math.max(i - 1, 0));
+        this.scrollActiveFilterGroupIntoView();
+        break;
+      case 'Enter': {
+        event.preventDefault();
+        const group = groups[this.activeFilterGroupIndex()];
+        if (group) this.toggleFilterGroup(group);
+        break;
+      }
+      case 'Escape':
+        event.preventDefault();
+        this.closeFilterGroupDropdown();
+        this.focusAfterRender('ledger-filter-group-trigger');
+        break;
+      case 'Tab':
+        this.closeFilterGroupDropdown();
+        break;
+    }
+  }
+
+  private scrollActiveFilterGroupIntoView() {
+    const el = this.document.getElementById(`ledger-filter-group-opt-${this.activeFilterGroupIndex()}`);
+    el?.scrollIntoView({ block: 'nearest' });
+  }
+
+  /** Add or remove a group from the filter, then reload the list. */
+  toggleFilterGroup(group: ChartOfAccount) {
+    if (group.id == null) return;
+    const id = group.id;
+    this.filterGroupIds.update(ids =>
+      ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id],
+    );
+    this.loadLedgers();
+  }
+
+  clearFilterGroups(event: Event) {
+    event.stopPropagation();
+    if (this.filterGroupIds().length === 0) return;
+    this.filterGroupIds.set([]);
+    this.loadLedgers();
+  }
+
+  // ---- print / export ----
+  print() {
+    if (this.canPrint()) window.print();
+  }
+
+  /** Export the rows currently shown to an .xlsx mirroring the printed sheet. */
+  exportExcel() {
+    if (!this.canPrint()) return;
+    const rows: ExcelCell[][] = [
+      [this.profile().name],
+      ['Ledger'],
+      [this.printMeta()],
+      [],
+      ['Ledger', 'Group', 'Opening (Dr)', 'Opening (Cr)'],
+    ];
+    for (const l of this.filteredLedgers()) {
+      rows.push([l.ledgerName, this.groupName(l), l.drOpeningBalance ?? 0, l.crOpeningBalance ?? 0]);
+    }
+    rows.push(['Total', '', this.totalDr(), this.totalCr()]);
+    this.excel.download('Ledger', rows, 'Ledger');
+  }
+
   loadLedgers() {
     this.loading.set(true);
     this.error.set('');
-    // The active tab maps to the SearchOpening body: "all" sends nothing,
-    // "with"/"without" toggle withOpeningOnly.
+    // The active tab maps to the SearchOpening body: "all" omits withOpeningOnly,
+    // "with"/"without" toggle it. The group filter scopes results server-side.
     const tab = this.tab();
-    const query = tab === 'all' ? {} : { withOpeningOnly: tab === 'with' };
+    const query: LedgerSearchQuery = {};
+    if (tab !== 'all') query.withOpeningOnly = tab === 'with';
+    const groupIds = this.filterGroupIds();
+    if (groupIds.length) query.groupId = groupIds;
     this.service
       .searchOpening(query)
       .subscribe({
@@ -151,6 +326,12 @@ export class Ledger {
 
   closeGroupDropdown() {
     this.groupOpen.set(false);
+  }
+
+  /** Document-click handler: dismiss any open combobox menu. */
+  closeAllDropdowns() {
+    this.groupOpen.set(false);
+    this.filterGroupOpen.set(false);
   }
 
   /** Keyboard handling on the closed combobox trigger: open on Enter / Space / ArrowDown. */

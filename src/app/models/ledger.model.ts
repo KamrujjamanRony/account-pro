@@ -20,7 +20,8 @@ export interface Ledger {
 
 export interface LedgerSearchQuery {
   id?: number | null;
-  groupId?: number | null;
+  /** A single group id, or several for multi-group filtering. */
+  groupId?: number | number[] | null;
   search?: string | null;
   withOpeningOnly?: boolean;
   /** Exclude "Cash at Bank" and "Cash in Hand" ledgers from the result. */
