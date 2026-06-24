@@ -94,7 +94,8 @@
         As on Date: {{ fmtDate(r.asOfDate) }} | Level: {{ levelLabel() }}
       </app-report-header>
 
-      <table class="report-table w-full border-collapse text-sm">
+      <div class="overflow-x-auto -mx-2">
+      <table class="report-table w-full min-w-150 border-collapse text-sm">
         <thead>
           <tr class="border-y-2 border-neutral-700 text-left">
             <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Group</th>
@@ -150,6 +151,7 @@
           }
         </tbody>
       </table>
+      </div>
 
       <!-- Balanced check -->
       @if (!r.isBalanced) {

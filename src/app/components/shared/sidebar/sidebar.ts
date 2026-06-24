@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../../../services/auth-service';
 import { PermissionService } from '../../../services/permission-service';
+import { LayoutService } from '../../../services/layout-service';
 import { environment } from '../../../../environments/environment';
 
 interface NavItem {
@@ -26,6 +27,7 @@ export class Sidebar {
   private auth = inject(AuthService);
   private permissions = inject(PermissionService);
   private router = inject(Router);
+  protected readonly layout = inject(LayoutService);
 
   protected readonly companyName = environment.companyName;
   protected readonly user = this.auth.currentUser;
@@ -49,6 +51,7 @@ export class Sidebar {
       const url = this.currentUrl();
       const active = this.navItems.find(item => this.isChildActive(item, url));
       this.openGroups.set(active ? new Set([active.label]) : new Set());
+      this.layout.closeMobileNav();
     });
   }
 

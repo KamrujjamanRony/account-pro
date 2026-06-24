@@ -71,7 +71,8 @@
         Date: {{ fmtDate(r.fromDate) }} to {{ fmtDate(r.toDate) }}
       </app-report-header>
 
-      <table class="report-table w-full border-collapse text-sm">
+      <div class="overflow-x-auto -mx-2">
+      <table class="report-table w-full min-w-150 border-collapse text-sm">
         <thead>
           <tr class="border-y-2 border-neutral-700 text-left align-bottom">
             <th scope="col" class="py-2 pr-3 font-bold text-neutral-800">Date</th>
@@ -182,6 +183,7 @@
           </tr>
         </tfoot>
       </table>
+      </div>
     </div>
   } @else if (hasRun()) {
     <p class="py-16 text-center text-sm text-neutral-500">No data for the selected period.</p>

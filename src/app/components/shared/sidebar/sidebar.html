@@ -1,5 +1,16 @@
+<!-- Mobile backdrop -->
+@if (layout.mobileNavOpen()) {
+  <div
+    class="fixed inset-0 z-30 bg-black/50 md:hidden"
+    aria-hidden="true"
+    (click)="layout.closeMobileNav()"
+  ></div>
+}
+
 <aside
-  class="sidebar fixed inset-y-0 left-0 z-40 flex w-14 flex-col text-neutral-300 transition-all duration-300 md:w-64"
+  class="sidebar fixed inset-y-0 left-0 z-40 flex flex-col text-neutral-300 transition-all duration-300 md:w-64"
+  [class.w-14]="!layout.mobileNavOpen()"
+  [class.w-64]="layout.mobileNavOpen()"
 >
   <!-- Brand -->
   <div class="flex h-16 items-center gap-3 px-3 md:px-4">
@@ -8,7 +19,10 @@
       aria-hidden="true"
       >AP</span
     >
-    <span class="brand-name hidden truncate text-base font-semibold tracking-wide text-white md:block">
+    <span
+      class="brand-name truncate text-base font-semibold tracking-wide text-white md:block"
+      [class.hidden]="!layout.mobileNavOpen()"
+    >
       {{ companyName }}
     </span>
   </div>
@@ -41,9 +55,10 @@
               >
                 <path [attr.d]="item.icon" />
               </svg>
-              <span class="hidden truncate md:block">{{ item.label }}</span>
+              <span class="truncate md:block" [class.hidden]="!layout.mobileNavOpen()">{{ item.label }}</span>
               <svg
-                class="nav-chevron ml-auto hidden h-4 w-4 shrink-0 md:block"
+                class="nav-chevron ml-auto h-4 w-4 shrink-0 md:block"
+                [class.hidden]="!layout.mobileNavOpen()"
                 [class.is-open]="isGroupOpen(item)"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -81,7 +96,7 @@
                       >
                         <path [attr.d]="child.icon" />
                       </svg>
-                      <span class="hidden truncate md:block">{{ child.label }}</span>
+                      <span class="truncate md:block" [class.hidden]="!layout.mobileNavOpen()">{{ child.label }}</span>
                     </a>
                   </li>
                 }
@@ -110,7 +125,7 @@
               >
                 <path [attr.d]="item.icon" />
               </svg>
-              <span class="hidden truncate md:block">{{ item.label }}</span>
+              <span class="truncate md:block" [class.hidden]="!layout.mobileNavOpen()">{{ item.label }}</span>
             </a>
           }
         </li>
@@ -122,7 +137,7 @@
   <div class="mt-auto px-2 pt-2 pb-3">
     <div class="sidebar-divider mb-2"></div>
     @if (user(); as u) {
-      <div class="mb-2 hidden items-center gap-3 rounded-xl px-2 py-2 md:flex">
+      <div class="mb-2 items-center gap-3 rounded-xl px-2 py-2 md:flex" [class.hidden]="!layout.mobileNavOpen()">
         <span
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white"
           aria-hidden="true"
@@ -152,7 +167,7 @@
       >
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
       </svg>
-      <span class="hidden md:block">Logout</span>
+      <span class="md:block" [class.hidden]="!layout.mobileNavOpen()">Logout</span>
     </button>
   </div>
 </aside>
