@@ -33,3 +33,15 @@
     break-inside: avoid;
   }
 }
+
+@media screen {
+  .report-scroll {
+    overflow-x: auto;
+    margin: 0 -1.5rem;
+    padding: 0 1.5rem;
+  }
+
+  .report-table {
+    min-width: 37.5rem;
+  }
+}

@@ -78,30 +78,34 @@ router-outlet + * {
   }
 }
 
-/* Print: show only the report sheet (`.print-area`), drop the app shell. Used
-   by the Cash Book / Bank Book reports so the PDF carries just the document. */
+/* Print: show only the report sheet (`.print-area`), drop the app shell.
+   The report flows in normal document flow (not absolutely positioned) so it
+   paginates naturally across pages and fills the full printable page width. */
 @media print {
+  /* Drop the app chrome entirely. */
   app-sidebar,
+  app-topbar,
   app-breadcrumb,
+  .app-ambient,
   .no-print {
     display: none !important;
   }
 
-  /* The main layout offsets content for the fixed sidebar — reset for print. */
-  body * {
-    visibility: hidden;
-  }
-
-  .print-area,
-  .print-area * {
-    visibility: visible;
+  /* Neutralise the on-screen layout offsets (fixed-sidebar margins, scroll
+     clipping, flex) so the report can flow full-width and break across pages. */
+  .app-shell,
+  .app-content,
+  .route-host {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    display: block !important;
   }
 
   .print-area {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    width: 100%;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
   }
 
   /* Side & bottom print margins only — the top gap is driven entirely by the

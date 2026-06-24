@@ -1,5 +1,5 @@
 <div
-  class="relative min-h-screen flex flex-col flex-auto shrink-0 overflow-hidden antialiased bg-neutral-50 text-black dark:bg-dark-surface dark:text-white"
+  class="app-shell relative min-h-screen flex flex-col flex-auto shrink-0 overflow-hidden antialiased bg-neutral-50 text-black dark:bg-dark-surface dark:text-white"
 >
   <!-- Ambient animated background -->
   <div class="app-ambient" aria-hidden="true">
@@ -10,7 +10,7 @@
   <app-sidebar />
   <app-topbar />
 
-  <div class="relative ml-14 mt-14 mb-10 md:ml-64">
+  <div class="app-content relative ml-14 mt-14 mb-10 md:ml-64">
     <main class="route-host">
       <router-outlet></router-outlet>
     </main>
