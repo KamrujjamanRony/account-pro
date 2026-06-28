@@ -177,12 +177,12 @@ export class Users {
       const payload: User = {
         id: id,
         userName: v.userName.trim(),
+        password: v.password ?? '',
         isActive: v.isActive,
         postBy,
         updateBy: postBy,
         menuPermissions: this.tree(),
       };
-      if (v.password) payload.password = v.password;
       this.userService.update(id, payload).subscribe({
         next: () => this.onSaved('updated'),
         error: () => this.onSaveError(),
