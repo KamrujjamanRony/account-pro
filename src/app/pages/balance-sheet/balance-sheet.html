@@ -37,13 +37,13 @@
     <!-- Filters -->
     <div class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-[1fr_1fr_auto] dark:border-neutral-800 dark:bg-neutral-900">
       <div>
-        <label for="bs-as-of" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">As on date</label>
-        <input id="bs-as-of" type="date" [value]="asOfDate()" (change)="asOfDate.set($any($event.target).value)"
+        <label for="bs-fy-start" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Fiscal year start</label>
+        <input id="bs-fy-start" type="date" [value]="fiscalYearStart()" (change)="fiscalYearStart.set($any($event.target).value)"
           class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
       </div>
       <div>
-        <label for="bs-fy-start" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">Fiscal year start</label>
-        <input id="bs-fy-start" type="date" [value]="fiscalYearStart()" (change)="fiscalYearStart.set($any($event.target).value)"
+        <label for="bs-as-of" class="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">As on date</label>
+        <input id="bs-as-of" type="date" [value]="asOfDate()" (change)="asOfDate.set($any($event.target).value)"
           class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-2 focus:outline-primary-500 dark:border-neutral-700 dark:bg-neutral-800" />
       </div>
       <div class="flex items-end">
