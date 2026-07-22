@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Account Pro",
+    "slug": "account-pro-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "accountpro",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.accountpro.mobile"
+    },
+    "android": {
+      "package": "com.accountpro.mobile",
+      "usesCleartextTraffic": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "companyName": "Account Pro",
+      "companyAddress": "Dhaka, Bangladesh",
+      "companyCode": 1,
+      "apiUrl": "http://10.0.2.2:1000/p",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a2e85145-e72a-40a4-b439-da09f4ebfb6c"
+      }
+    }
+  }
+}
