@@ -238,12 +238,14 @@ export interface GeneralLedgerReport {
 
 /** Filter query for the General Ledger endpoint. */
 export interface GeneralLedgerQuery extends ReportDateQuery {
-  /** Optional group filter by id; null/empty = all groups. */
-  groupName?: number[] | null;
-  /** Optional ledger filter by id; null/empty = all ledgers. */
-  ledger?: number[] | null;
+  /** Optional group filter as chart-of-account ids; empty = all groups. */
+  groupId?: number[] | null;
+  /** Optional ledger filter as ledger ids; empty = all ledgers. */
+  ledgerId?: number[] | null;
   /** Optional cost-center filter; null = all cost centers. */
   costCenter?: string | null;
+  /** Optional voucher-type filter (codes, e.g. ["CR", "CP"]); empty = all types. */
+  type?: string[] | null;
 }
 
 /** A single Group / Ledger / Short Narration / Dr / Cr detail row of a voucher. */

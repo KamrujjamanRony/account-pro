@@ -106,16 +106,20 @@ export class ReportService {
   /**
    * General Ledger — every posting for each ledger, grouped by ledger group,
    * with a per-ledger Sub Total and per-group Summary, for a date range.
-   * Optional {@link GeneralLedgerQuery.groupName}, {@link GeneralLedgerQuery.ledger}
-   * and {@link GeneralLedgerQuery.costCenter} narrow the result server-side.
+   * Optional {@link GeneralLedgerQuery.groupId} (group ids),
+   * {@link GeneralLedgerQuery.ledgerId} (ledger ids),
+   * {@link GeneralLedgerQuery.costCenter} and {@link GeneralLedgerQuery.type}
+   * (voucher-type codes) narrow the result server-side; the id/type filters are
+   * sent as empty arrays when nothing is selected.
    */
   generalLedger(query: GeneralLedgerQuery): Observable<GeneralLedgerReport> {
     const body: GeneralLedgerQuery = {
       fromDate: query.fromDate,
       toDate: query.toDate,
-      groupName: query.groupName ?? null,
-      ledger: query.ledger ?? null,
+      groupId: query.groupId ?? [],
+      ledgerId: query.ledgerId ?? [],
       costCenter: query.costCenter ?? null,
+      type: query.type ?? [],
     };
     return this.http
       .post<ApiResponse<unknown>>(`${this.baseUrl}/GeneralLedger`, body)

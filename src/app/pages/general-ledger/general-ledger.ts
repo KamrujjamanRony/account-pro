@@ -7,6 +7,7 @@ import { LedgerService } from '../../services/ledger-service';
 import { CostCenterService } from '../../services/cost-center-service';
 import { ExcelCell, ExcelExportService } from '../../services/excel-export-service';
 import { GeneralLedgerReport } from '../../models/report.model';
+import { VOUCHER_TYPES } from '../../models/voucher.model';
 import { SearchSelect, SelectOption } from '../../components/shared/search-select/search-select';
 import { ReportHeader } from '../../components/shared/report-header/report-header';
 
@@ -26,10 +27,17 @@ export class GeneralLedger {
   protected readonly fromDate = signal(this.startOfMonth());
   protected readonly toDate = signal(this.today());
 
-  /** Filter selections; empty means "all". Groups & ledgers are multi-select. */
+  /** Filter selections; empty means "all". Groups, ledgers & types are multi-select. */
   protected readonly selectedGroups = signal<string[]>([]);
   protected readonly selectedLedgers = signal<string[]>([]);
   protected readonly selectedCostCenter = signal<string[]>([]);
+  protected readonly selectedTypes = signal<string[]>([]);
+
+  /** Voucher-type dropdown options (code → label), e.g. "CR — Cash Receipt". */
+  protected readonly typeOptions: SelectOption[] = VOUCHER_TYPES.map(t => ({
+    value: t.code,
+    label: `${t.code} — ${t.label}`,
+  }));
 
   /** Dropdown option lists. */
   protected readonly groupOptions = signal<SelectOption[]>([]);
@@ -89,9 +97,10 @@ export class GeneralLedger {
       .generalLedger({
         fromDate: this.fromDate(),
         toDate: this.toDate(),
-        groupName: this.toIds(this.selectedGroups()),
-        ledger: this.toIds(this.selectedLedgers()),
+        groupId: this.toIds(this.selectedGroups()),
+        ledgerId: this.toIds(this.selectedLedgers()),
         costCenter: this.selectedCostCenter()[0] ?? null,
+        type: this.selectedTypes(),
       })
       .subscribe({
         next: report => {
@@ -108,10 +117,9 @@ export class GeneralLedger {
       });
   }
 
-  /** Selection values are id strings; convert to a numeric array (null when empty). */
-  private toIds(values: string[]): number[] | null {
-    const ids = values.map(Number).filter(n => !Number.isNaN(n));
-    return ids.length ? ids : null;
+  /** Selection values are id strings; convert to a numeric array (empty = all). */
+  private toIds(values: string[]): number[] {
+    return values.map(Number).filter(n => !Number.isNaN(n));
   }
 
   print() {
