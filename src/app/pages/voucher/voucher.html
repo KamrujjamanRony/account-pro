@@ -5,14 +5,27 @@
       <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">Voucher</h1>
       <p class="text-sm text-neutral-500">Record and manage double-entry vouchers.</p>
     </div>
-    <button
-      *appCan="'Voucher:create'"
-      type="button"
-      (click)="openCreate()"
-      class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-    >
-      + New voucher
-    </button>
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        (click)="print()"
+        [disabled]="!canPrint()"
+        class="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+        </svg>
+        Print / Save PDF
+      </button>
+      <button
+        *appCan="'Voucher:create'"
+        type="button"
+        (click)="openCreate()"
+        class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      >
+        + New voucher
+      </button>
+    </div>
   </div>
 
   @if (error()) {
@@ -109,9 +122,58 @@
   </div>
 </div>
 
+<!-- Print sheet: hidden on screen, isolated by the global print rules. -->
+<div class="print-area print-sheet mx-auto max-w-6xl bg-white p-6 text-neutral-900 sm:p-10">
+  <app-report-header [title]="printTitle()">{{ printMeta() }}</app-report-header>
+
+  <table class="report-table w-full border-collapse text-sm">
+    <thead>
+      <tr class="border-y-2 border-neutral-700 text-neutral-900">
+        <th scope="col" class="w-10 py-2 pr-3 text-right font-bold">Sl.</th>
+        <th scope="col" class="py-2 px-3 text-left font-bold">Voucher No</th>
+        <th scope="col" class="py-2 px-3 text-left font-bold">Date</th>
+        <th scope="col" class="py-2 px-3 text-left font-bold">Reference</th>
+        <th scope="col" class="py-2 px-3 text-left font-bold">Narration</th>
+        <th scope="col" class="py-2 pl-3 text-right font-bold">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (voucher of filteredVouchers(); track voucher.id; let i = $index) {
+        <tr class="border-b border-neutral-300">
+          <td class="py-1.5 pr-3 text-right tabular-nums text-neutral-700">{{ i + 1 }}</td>
+          <td class="py-1.5 px-3 font-medium whitespace-nowrap text-neutral-900">{{ voucher.voucherNo || ('#' + voucher.id) }}</td>
+          <td class="py-1.5 px-3 whitespace-nowrap text-neutral-800">{{ fmtDate(voucher.voucherDate) }}</td>
+          <td class="py-1.5 px-3 text-neutral-800">{{ voucher.reference || '—' }}</td>
+          <td class="py-1.5 px-3 text-neutral-800">{{ voucher.narration || '—' }}</td>
+          <td class="py-1.5 pl-3 text-right tabular-nums text-neutral-900">{{ voucherAmount(voucher) | number:'1.2-2' }}</td>
+        </tr>
+      } @empty {
+        <tr class="border-b border-neutral-300">
+          <td colspan="6" class="py-6 text-center text-neutral-500">No vouchers for the selected filters.</td>
+        </tr>
+      }
+    </tbody>
+    <tfoot>
+      <tr class="border-y-2 border-neutral-700 font-bold text-neutral-900">
+        <td class="py-2 pr-3" colspan="5">
+          Total ({{ filteredVouchers().length }} voucher{{ filteredVouchers().length === 1 ? '' : 's' }})
+        </td>
+        <td class="py-2 pl-3 text-right tabular-nums">{{ totalAmount() | number:'1.2-2' }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Signatures -->
+  <div class="signatures mt-16 grid grid-cols-3 gap-8 text-center text-xs text-neutral-700">
+    <div class="border-t border-neutral-500 pt-1">Prepared By</div>
+    <div class="border-t border-neutral-500 pt-1">Checked By</div>
+    <div class="border-t border-neutral-500 pt-1">Approved By</div>
+  </div>
+</div>
+
 <!-- Form dialog -->
 @if (showForm()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="voucher-form-title">
+  <div class="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="voucher-form-title">
     <div class="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
       <button type="button" (click)="closeForm()" aria-label="Close"
         class="absolute right-4 top-4 rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200">

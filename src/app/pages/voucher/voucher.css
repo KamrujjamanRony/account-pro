@@ -1,5 +1,54 @@
 /*
-  The voucher list and its create/edit form are screen-only. Printing a single
-  voucher now lives on the dedicated Print Voucher page (voucher-print), so this
-  page carries no print-specific styles.
+  The voucher list and its create/edit form are screen-only; a single voucher is
+  printed from the dedicated Print Voucher page (voucher-print). This page prints
+  the *register* — the rows currently listed — from `.print-sheet`, which is
+  hidden on screen and revealed when printing, where the global rules in
+  styles.css isolate `.print-area`.
 */
+.print-sheet {
+  display: none;
+}
+
+.report-table th,
+.report-table td {
+  vertical-align: top;
+}
+
+@media print {
+  .print-sheet {
+    display: block;
+    /* Neutralise the letterhead's accent (its contact icon inherits this
+       custom property) so the register prints strictly black & white. */
+    --color-primary-600: #000;
+  }
+
+  .print-area {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    color: #000 !important;
+  }
+
+  /* Repeat the table header across page breaks and keep rows intact. */
+  .report-table thead {
+    display: table-header-group;
+  }
+
+  /* A `tfoot` is a footer group, which the browser repeats at the bottom of
+     every printed page. The grand total belongs on the last page only, so demote
+     it to an ordinary row group — it then flows once, after the final row. */
+  .report-table tfoot {
+    display: table-row-group;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+
+  .signatures {
+    break-inside: avoid;
+  }
+}

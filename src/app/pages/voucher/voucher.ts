@@ -17,10 +17,11 @@ import { Ledger } from '../../models/ledger.model';
 import { CostCenter } from '../../models/cost-center.model';
 import { VoucherService } from '../../services/voucher-service';
 import { CanDirective } from '../../directives/can.directive';
+import { ReportHeader } from '../../components/shared/report-header/report-header';
 
 @Component({
   selector: 'app-voucher',
-  imports: [ReactiveFormsModule, DecimalPipe, DatePipe, CanDirective, RouterLink],
+  imports: [ReactiveFormsModule, DecimalPipe, DatePipe, CanDirective, RouterLink, ReportHeader],
   templateUrl: './voucher.html',
   styleUrl: './voucher.css',
   host: {
@@ -158,6 +159,30 @@ export class Voucher {
   protected readonly totalAmount = computed(() =>
     this.filteredVouchers().reduce((sum, v) => sum + this.voucherAmount(v), 0),
   );
+
+  // ---- print ----
+  /** Only offer the register when there are rows on it. */
+  protected readonly canPrint = computed(() => this.filteredVouchers().length > 0);
+
+  /** Printed sheet title, narrowed to the selected type when one is filtered. */
+  protected readonly printTitle = computed(() => {
+    const type = this.typeFilter();
+    return type ? `${this.typeLabel(type)} Register` : 'Voucher Register';
+  });
+
+  /** Meta line under the printed title, summarising the active filters. */
+  protected readonly printMeta = computed(() => {
+    const from = this.fromDate();
+    const to = this.toDate();
+    const parts: string[] = [];
+    if (from && to) parts.push(`Date: ${this.fmtDate(from)} to ${this.fmtDate(to)}`);
+    else if (from) parts.push(`Date: from ${this.fmtDate(from)}`);
+    else if (to) parts.push(`Date: up to ${this.fmtDate(to)}`);
+    else parts.push('All dates');
+    const term = this.search().trim();
+    if (term) parts.push(`Search: "${term}"`);
+    return parts.join(' • ');
+  });
 
   constructor() {
     this.loadVouchers();
@@ -702,6 +727,26 @@ export class Voucher {
         this.alert.error('Failed to delete the voucher.');
       },
     });
+  }
+
+  // ---- print ----
+  /** Print the register. The print stylesheet leaves only the sheet visible. */
+  print() {
+    if (this.canPrint()) window.print();
+  }
+
+  /**
+   * Format a date as dd/MM/yyyy for the printed sheet. The API may return ISO
+   * strings or already display-formatted values, so unparseable values are
+   * returned unchanged.
+   */
+  fmtDate(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${date.getFullYear()}`;
   }
 
   private today(): string {
