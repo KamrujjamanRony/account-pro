@@ -14,6 +14,17 @@
   vertical-align: top;
 }
 
+/* The columns are user-chosen, so square up whichever ones land on the edges. */
+.report-table th:first-child,
+.report-table td:first-child {
+  padding-left: 0;
+}
+
+.report-table th:last-child,
+.report-table td:last-child {
+  padding-right: 0;
+}
+
 @media print {
   .print-sheet {
     display: block;

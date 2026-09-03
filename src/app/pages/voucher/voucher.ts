@@ -19,14 +19,36 @@ import { VoucherService } from '../../services/voucher-service';
 import { CanDirective } from '../../directives/can.directive';
 import { ReportHeader } from '../../components/shared/report-header/report-header';
 
+/** A column the printed register can show, in the order it is printed. */
+interface PrintColumn {
+  key: string;
+  label: string;
+  /** Right-aligned with tabular numerals (Sl., Amount). */
+  right?: boolean;
+  /** Short, fixed-width value that should never wrap. */
+  nowrap?: boolean;
+}
+
+/** Every column offered by the print column picker. `amount` must stay last. */
+const PRINT_COLUMNS: readonly PrintColumn[] = [
+  { key: 'serial', label: 'Sl.', right: true, nowrap: true },
+  { key: 'voucherNo', label: 'Voucher No', nowrap: true },
+  { key: 'date', label: 'Date', nowrap: true },
+  { key: 'type', label: 'Type', nowrap: true },
+  { key: 'reference', label: 'Reference' },
+  { key: 'costCenter', label: 'Cost Center' },
+  { key: 'narration', label: 'Narration' },
+  { key: 'amount', label: 'Amount', right: true, nowrap: true },
+];
+
 @Component({
   selector: 'app-voucher',
   imports: [ReactiveFormsModule, DecimalPipe, DatePipe, CanDirective, RouterLink, ReportHeader],
   templateUrl: './voucher.html',
   styleUrl: './voucher.css',
   host: {
-    // Close any open ledger combobox when clicking outside of it.
-    '(document:click)': 'closeLineDropdown()',
+    // Close any open ledger combobox / column menu when clicking outside of it.
+    '(document:click)': 'closeOverlays()',
   },
 })
 export class Voucher {
@@ -161,8 +183,37 @@ export class Voucher {
   );
 
   // ---- print ----
-  /** Only offer the register when there are rows on it. */
-  protected readonly canPrint = computed(() => this.filteredVouchers().length > 0);
+  /** Every column the picker offers, in print order. */
+  protected readonly printColumns = PRINT_COLUMNS;
+  /** Keys of the columns to print — all of them until the user narrows it. */
+  protected readonly printColumnKeys = signal<string[]>(PRINT_COLUMNS.map(c => c.key));
+  protected readonly columnsOpen = signal(false);
+
+  /** The chosen columns, kept in the fixed print order rather than click order. */
+  protected readonly visibleColumns = computed(() => {
+    const keys = this.printColumnKeys();
+    return PRINT_COLUMNS.filter(c => keys.includes(c.key));
+  });
+
+  /** Trigger label: "All columns" or "5 of 8 columns". */
+  protected readonly columnsLabel = computed(() => {
+    const count = this.visibleColumns().length;
+    if (count === PRINT_COLUMNS.length) return 'All columns';
+    return `${count} of ${PRINT_COLUMNS.length} columns`;
+  });
+
+  /**
+   * Columns the printed "Total" label spans — everything before the amount, or
+   * 0 when Amount is the only column left (then the label cell is dropped).
+   */
+  protected readonly totalLabelSpan = computed(
+    () => this.visibleColumns().length - (this.isColumnSelected('amount') ? 1 : 0),
+  );
+
+  /** Only offer the register when there are rows and columns to put on it. */
+  protected readonly canPrint = computed(
+    () => this.filteredVouchers().length > 0 && this.visibleColumns().length > 0,
+  );
 
   /** Printed sheet title, narrowed to the selected type when one is filtered. */
   protected readonly printTitle = computed(() => {
@@ -733,6 +784,76 @@ export class Voucher {
   /** Print the register. The print stylesheet leaves only the sheet visible. */
   print() {
     if (this.canPrint()) window.print();
+  }
+
+  isColumnSelected(key: string): boolean {
+    return this.printColumnKeys().includes(key);
+  }
+
+  toggleColumn(key: string) {
+    this.printColumnKeys.update(keys =>
+      keys.includes(key) ? keys.filter(k => k !== key) : [...keys, key],
+    );
+  }
+
+  selectAllColumns() {
+    this.printColumnKeys.set(PRINT_COLUMNS.map(c => c.key));
+  }
+
+  toggleColumnsMenu(event: Event) {
+    // Keep the click from reaching the document handler that closes the menu.
+    event.stopPropagation();
+    this.columnsOpen.update(open => !open);
+  }
+
+  closeColumnsMenu() {
+    this.columnsOpen.set(false);
+  }
+
+  /** Escape inside the menu closes it and returns focus to its trigger. */
+  onColumnsMenuKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    this.closeColumnsMenu();
+    this.focusAfterRender('voucher-columns-trigger');
+  }
+
+  /** Close the ledger comboboxes and the column menu on an outside click. */
+  closeOverlays() {
+    this.closeLineDropdown();
+    this.closeColumnsMenu();
+  }
+
+  /**
+   * Text for a printed cell. `amount` is excluded — the template renders it
+   * through the number pipe so it keeps the list's `1.2-2` formatting.
+   */
+  printCell(key: string, voucher: VoucherModel, index: number): string {
+    switch (key) {
+      case 'serial':
+        return String(index + 1);
+      case 'voucherNo':
+        return voucher.voucherNo || `#${voucher.id}`;
+      case 'date':
+        return this.fmtDate(voucher.voucherDate);
+      case 'type':
+        return this.typeLabel(voucher.type);
+      case 'reference':
+        return voucher.reference || '—';
+      case 'costCenter':
+        return this.costCenterName(voucher.costCenter) || '—';
+      case 'narration':
+        return voucher.narration || '—';
+      default:
+        return '';
+    }
+  }
+
+  /** Resolve a cost-center id to its name for display. */
+  costCenterName(value: string | null | undefined): string {
+    if (value == null || value === '') return '';
+    const match = this.costCenters().find(c => String(c.id) === String(value));
+    return match?.name ?? String(value);
   }
 
   /**

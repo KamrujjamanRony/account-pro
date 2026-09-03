@@ -6,6 +6,55 @@
       <p class="text-sm text-neutral-500">Record and manage double-entry vouchers.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <!-- Print column picker -->
+      <div class="relative" (click)="$event.stopPropagation()" (keydown)="onColumnsMenuKeydown($event)">
+        <button
+          id="voucher-columns-trigger"
+          type="button"
+          (click)="toggleColumnsMenu($event)"
+          aria-haspopup="true"
+          aria-controls="voucher-columns-menu"
+          [attr.aria-expanded]="columnsOpen()"
+          class="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 3h18v18H3zM9 3v18M15 3v18" />
+          </svg>
+          {{ columnsLabel() }}
+          <svg class="h-4 w-4 shrink-0 text-neutral-400 transition-transform" [class.rotate-180]="columnsOpen()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+
+        @if (columnsOpen()) {
+          <div id="voucher-columns-menu" class="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+            <fieldset class="px-3 py-2">
+              <legend class="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">Columns to print</legend>
+              @for (col of printColumns; track col.key) {
+                <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-neutral-700 dark:text-neutral-200">
+                  <input
+                    type="checkbox"
+                    [checked]="isColumnSelected(col.key)"
+                    (change)="toggleColumn(col.key)"
+                    class="h-4 w-4 shrink-0 accent-primary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  />
+                  <span>{{ col.label }}</span>
+                </label>
+              }
+            </fieldset>
+            <div class="flex items-center justify-between gap-2 border-t border-neutral-200 px-3 py-2 dark:border-neutral-700">
+              <button type="button" (click)="selectAllColumns()"
+                class="rounded px-1.5 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:hover:bg-primary-950">
+                Select all
+              </button>
+              <button type="button" (click)="closeColumnsMenu()"
+                class="rounded px-1.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-neutral-300 dark:hover:bg-neutral-700">
+                Done
+              </button>
+            </div>
+          </div>
+        }
+      </div>
       <button
         type="button"
         (click)="print()"
@@ -129,36 +178,47 @@
   <table class="report-table w-full border-collapse text-sm">
     <thead>
       <tr class="border-y-2 border-neutral-700 text-neutral-900">
-        <th scope="col" class="w-10 py-2 pr-3 text-right font-bold">Sl.</th>
-        <th scope="col" class="py-2 px-3 text-left font-bold">Voucher No</th>
-        <th scope="col" class="py-2 px-3 text-left font-bold">Date</th>
-        <th scope="col" class="py-2 px-3 text-left font-bold">Reference</th>
-        <th scope="col" class="py-2 px-3 text-left font-bold">Narration</th>
-        <th scope="col" class="py-2 pl-3 text-right font-bold">Amount</th>
+        @for (col of visibleColumns(); track col.key) {
+          <th scope="col" class="py-2 px-3 font-bold" [class.text-right]="col.right" [class.text-left]="!col.right">
+            {{ col.label }}
+          </th>
+        }
       </tr>
     </thead>
     <tbody>
       @for (voucher of filteredVouchers(); track voucher.id; let i = $index) {
         <tr class="border-b border-neutral-300">
-          <td class="py-1.5 pr-3 text-right tabular-nums text-neutral-700">{{ i + 1 }}</td>
-          <td class="py-1.5 px-3 font-medium whitespace-nowrap text-neutral-900">{{ voucher.voucherNo || ('#' + voucher.id) }}</td>
-          <td class="py-1.5 px-3 whitespace-nowrap text-neutral-800">{{ fmtDate(voucher.voucherDate) }}</td>
-          <td class="py-1.5 px-3 text-neutral-800">{{ voucher.reference || '—' }}</td>
-          <td class="py-1.5 px-3 text-neutral-800">{{ voucher.narration || '—' }}</td>
-          <td class="py-1.5 pl-3 text-right tabular-nums text-neutral-900">{{ voucherAmount(voucher) | number:'1.2-2' }}</td>
+          @for (col of visibleColumns(); track col.key) {
+            <td class="py-1.5 px-3 text-neutral-800"
+              [class.text-right]="col.right"
+              [class.tabular-nums]="col.right"
+              [class.whitespace-nowrap]="col.nowrap">
+              @if (col.key === 'amount') {
+                {{ voucherAmount(voucher) | number:'1.2-2' }}
+              } @else {
+                {{ printCell(col.key, voucher, i) }}
+              }
+            </td>
+          }
         </tr>
       } @empty {
         <tr class="border-b border-neutral-300">
-          <td colspan="6" class="py-6 text-center text-neutral-500">No vouchers for the selected filters.</td>
+          <td [attr.colspan]="visibleColumns().length" class="py-6 text-center text-neutral-500">
+            No vouchers for the selected filters.
+          </td>
         </tr>
       }
     </tbody>
     <tfoot>
       <tr class="border-y-2 border-neutral-700 font-bold text-neutral-900">
-        <td class="py-2 pr-3" colspan="5">
-          Total ({{ filteredVouchers().length }} voucher{{ filteredVouchers().length === 1 ? '' : 's' }})
-        </td>
-        <td class="py-2 pl-3 text-right tabular-nums">{{ totalAmount() | number:'1.2-2' }}</td>
+        @if (totalLabelSpan() > 0) {
+          <td class="py-2 px-3" [attr.colspan]="totalLabelSpan()">
+            Total ({{ filteredVouchers().length }} voucher{{ filteredVouchers().length === 1 ? '' : 's' }})
+          </td>
+        }
+        @if (isColumnSelected('amount')) {
+          <td class="py-2 px-3 text-right tabular-nums">{{ totalAmount() | number:'1.2-2' }}</td>
+        }
       </tr>
     </tfoot>
   </table>
